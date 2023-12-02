@@ -25,41 +25,43 @@ class YoloDetector():
         frame = cv2.resize(frame, (width, height))
 
         results = self.model(frame)
-        results.show()
-        print(results)
-
-        labels, cord = results.xyxyn[0][:, -1], results.xyxyn[0][:, :-1]
-
+        
+        #print(results.pandas().xyxy[0])
+        labels, cord = results.xyxyn[0].cpu(), results.xyxyn[0].cpu()
+        labels, cord = labels[:, -1].numpy(), cord[:, :-1].numpy()
         return labels, cord
     
     def class_to_label(self, x):
         return self.classes[int(x)]
     
-    def plot_boxes(self, results, frame, height, width, confidence=0.3):
+    def plot_boxes(self, results, frame, height, width, confidence=0.2):
 
         labels, cord = results
         detections = []
 
         n = len(labels)
-        x_shape, y_shape = width, height
+        x_shape, y_shape = frame.shape[1], frame.shape[0]
 
         for i in range(n):
             row = cord[i]
 
-            if row[4]>=confidence:
+            if row[4]>=confidence and self.class_to_label(labels[i]) == 'person':
                 x1, y1, x2, y2 = int(row[0]*x_shape), int(row[1]*y_shape), int(row[2]*x_shape), int(row[3]*y_shape)
-                
+                bgr = (0, 0, 255)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), bgr, 2)
+                cv2.putText(frame, self.class_to_label(labels[i]), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
+                detections.append(((x1, y1), (x2, y2), row[4], int(labels[i])))
                 #In this demonstration, we will only be detecting persons. You can add classes of your choice
-                if self.class_to_label(labels[i]) == 'person':
+                # if self.class_to_label(labels[i]) == 'person':
 
-                    x_center = x1 + (x2-x1)
-                    y_center = y1 + ((y2-y1) / 2)
+                #     x_center = x1 + (x2-x1)
+                #     y_center = y1 + ((y2-y1) / 2)
 
-                    tlwh = np.asarray([x1, y1, int(x2-x1), int(y2-y1)], dtype = np.float32)
-                    confidence = float(row[4].item())
-                    feature = 'car'
+                #     tlwh = np.asarray([x1, y1, int(x2-x1), int(y2-y1)], dtype = np.float32)
+                #     confidence = float(row[4].item())
+                #     feature = 'car'
 
-                    detections.append(([x1, y1, int(x2), int(y2)], row[4].item(), 'person'))
+                #     detections.append(([x1, y1, int(x2), int(y2)], row[4].item(), 'person'))
         
         return frame, detections
     
@@ -68,16 +70,13 @@ if __name__ == '__main__':
     detector = YoloDetector()
 
     # frame = cv2.imread('test.jpg')
-    # img = frame.copy()
     # height, width = frame.shape[:2]
     # results = detector.score_frame(frame)
     # frame, detections = detector.plot_boxes(results, frame, height, width)
     # print(detections)
-    # for i in detections:
-    #     ind = i[0]
-    #     cv2.rectangle(img, (int(ind[0]),int(ind[1])),(int(ind[2]),int(ind[3])),(0,0,255),2)
-    # cv2.imshow('frame', cv2.resize(img, (int(width/2), int(height/2))))
+    # cv2.imshow('frame', cv2.resize(frame, (int(width/2), int(height/2))))
     # cv2.waitKey(0)
+
 
 
     # webcam = cv2.VideoCapture(0)
@@ -101,20 +100,14 @@ if __name__ == '__main__':
 
     # Setting resolution for webcam
 
-    #Initializing the detection class
-    detector = YoloDetector()
-
     while True:
         _, frame = video.read()
-        #frame = cv2.flip(frame, 1)
+        if frame is None:
+            break
+        frame = cv2.flip(frame, 1)
         height, width = frame.shape[:2]
         results = detector.score_frame(frame)
         frame, detections = detector.plot_boxes(results, frame, height, width)
-        # for i in detections:
-        #     i = i[0]
-        #     cv2.rectangle(frame, (int(i[0]),int(i[1])),(int(i[2]),int(i[3])),(0,0,255),2)
-        # cv2.imshow('frame', cv2.resize(frame, (int(width/2), int(height/2))))
-        # if cv2.waitKey(1) & 0xFF == ord('q'):
-        #     break
+        
     video.release()
     cv2.destroyAllWindows()
