@@ -2,7 +2,6 @@ import torch
 import cv2
 import numpy as np
 import os
-import os
 
 FILE_NAME =  os.path.dirname(os.path.realpath(__file__)) + '/IMG_3061.MOV'
 
@@ -14,7 +13,7 @@ class YoloDetector():
         # model_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'yolov7-tiny.torchscript.pt')
         # self.model = torch.jit.load(model_path)
         self.classes = self.model.names
-        print(self.classes)
+        #print(self.classes)
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print('Using Device:', self.device)
     
@@ -26,6 +25,8 @@ class YoloDetector():
         frame = cv2.resize(frame, (width, height))
 
         results = self.model(frame)
+        results.show()
+        print(results)
 
         labels, cord = results.xyxyn[0][:, -1], results.xyxyn[0][:, :-1]
 
@@ -65,19 +66,36 @@ class YoloDetector():
 
 if __name__ == '__main__':
     detector = YoloDetector()
-    # cap = cv2.VideoCapture(0)
+
+    # frame = cv2.imread('test.jpg')
+    # img = frame.copy()
+    # height, width = frame.shape[:2]
+    # results = detector.score_frame(frame)
+    # frame, detections = detector.plot_boxes(results, frame, height, width)
+    # print(detections)
+    # for i in detections:
+    #     ind = i[0]
+    #     cv2.rectangle(img, (int(ind[0]),int(ind[1])),(int(ind[2]),int(ind[3])),(0,0,255),2)
+    # cv2.imshow('frame', cv2.resize(img, (int(width/2), int(height/2))))
+    # cv2.waitKey(0)
+
+
+    # webcam = cv2.VideoCapture(0)
     # while True:
-    #     _, frame = cap.read()
-    #     frame = cv2.flip(frame, 1)
+    #     _, frame = webcam.read()
+    #     #frame = cv2.flip(frame, 1)
     #     height, width = frame.shape[:2]
-    #     labels, cord = detector.score_frame(frame)
-    #     results = (labels, cord)
+    #     results = detector.score_frame(frame)
     #     frame, detections = detector.plot_boxes(results, frame, height, width)
-    #     cv2.imshow('frame', frame)
+    #     for i in detections:
+    #         i = i[0]
+    #         cv2.rectangle(frame, (int(i[0]),int(i[1])),(int(i[2]),int(i[3])),(0,0,255),2)
+    #     cv2.imshow('frame', cv2.resize(frame, (int(width/2), int(height/2))))
     #     if cv2.waitKey(1) & 0xFF == ord('q'):
     #         break
-    # cap.release()
+    # webcam.release()
     # cv2.destroyAllWindows()
+
 
     video = cv2.VideoCapture(FILE_NAME)
 
@@ -92,11 +110,11 @@ if __name__ == '__main__':
         height, width = frame.shape[:2]
         results = detector.score_frame(frame)
         frame, detections = detector.plot_boxes(results, frame, height, width)
-        for i in detections:
-            i = i[0]
-            cv2.rectangle(frame, (int(i[0]),int(i[1])),(int(i[2]),int(i[3])),(0,0,255),2)
-        cv2.imshow('frame', cv2.resize(frame, (int(width/2), int(height/2))))
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        # for i in detections:
+        #     i = i[0]
+        #     cv2.rectangle(frame, (int(i[0]),int(i[1])),(int(i[2]),int(i[3])),(0,0,255),2)
+        # cv2.imshow('frame', cv2.resize(frame, (int(width/2), int(height/2))))
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+        #     break
     video.release()
     cv2.destroyAllWindows()
