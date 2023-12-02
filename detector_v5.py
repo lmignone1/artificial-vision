@@ -103,11 +103,14 @@ if __name__ == '__main__':
     while True:
         _, frame = video.read()
         if frame is None:
+            print('last frame')
             break
         frame = cv2.flip(frame, 1)
         height, width = frame.shape[:2]
         results = detector.score_frame(frame)
         frame, detections = detector.plot_boxes(results, frame, height, width)
-        
+        cv2.imshow('frame', cv2.resize(frame, (int(width/2), int(height/2))))
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
     video.release()
     cv2.destroyAllWindows()
