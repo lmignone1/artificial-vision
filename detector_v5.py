@@ -2,8 +2,9 @@ import torch
 import cv2
 import numpy as np
 import os
+from deep_sort_realtime.deepsort_tracker import DeepSort
 
-FILE_NAME =  os.path.dirname(os.path.realpath(__file__)) + '/IMG_3061.MOV'
+FILE_NAME =  os.path.dirname(os.path.realpath(__file__)) + '/IMG_3064.MOV'
 
 class YoloDetector():
 
@@ -48,9 +49,10 @@ class YoloDetector():
             if row[4]>=confidence and self.class_to_label(labels[i]) == 'person':
                 x1, y1, x2, y2 = int(row[0]*x_shape), int(row[1]*y_shape), int(row[2]*x_shape), int(row[3]*y_shape)
                 bgr = (0, 0, 255)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), bgr, 2)
-                cv2.putText(frame, self.class_to_label(labels[i]), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
-                detections.append(((x1, y1), (x2, y2), row[4], int(labels[i])))
+                #cv2.rectangle(frame, (x1, y1), (x2, y2), bgr, 2)
+                #cv2.putText(frame, self.class_to_label(labels[i]), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.9, bgr, 2)
+                #detections.append(((x1, y1), (x2, y2), row[4], int(labels[i])))
+                detections.append([[x1, y1, x2 - x1, y2- y1], confidence, int(labels[i])])
                 #In this demonstration, we will only be detecting persons. You can add classes of your choice
                 # if self.class_to_label(labels[i]) == 'person':
 
@@ -68,6 +70,7 @@ class YoloDetector():
 
 if __name__ == '__main__':
     detector = YoloDetector()
+    tracker = DeepSort()
 
     # frame = cv2.imread('test.jpg')
     # height, width = frame.shape[:2]
@@ -109,6 +112,16 @@ if __name__ == '__main__':
         height, width = frame.shape[:2]
         results = detector.score_frame(frame)
         frame, detections = detector.plot_boxes(results, frame, height, width)
+        tracks = tracker.update_tracks(detections, frame=frame) # serve per aggiornare il tracker con le detection individuate nella fase precedente.
+        for track in tracks:
+            if not track.is_confirmed(): # se il track non è confermato, si ignora
+                continue
+            track_id = track.track_id # per ottenere l'id del track
+            ltrb = track.to_ltrb() # per ottenere il bounding box
+            x_min, y_min, x_max, y_max = int(ltrb[0]), int(ltrb[1]), int(ltrb[2]), int(ltrb[3])
+            cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+            cv2.putText(frame, "ID: "+str(track_id), (x_min-5, y_min-8), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
         cv2.imshow('frame', cv2.resize(frame, (int(width/2), int(height/2))))
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
