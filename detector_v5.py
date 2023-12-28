@@ -2,7 +2,7 @@ import torch
 import cv2
 import numpy as np
 import os, sys
-from deep_sort_realtime.deepsort_tracker import DeepSort
+from deep_sort_realtime.deepsort_tracker import *
 
 FILE_NAME =  os.path.dirname(os.path.realpath(__file__)) + '/IMG_3064.MOV'
 
@@ -61,8 +61,8 @@ class YoloDetector():
 
 if __name__ == '__main__':
     detector = YoloDetector()
-    tracker = DeepSort(max_age=100)
-
+    tracker = DeepSort(embedder=EMBEDDER_CHOICES[1], embedder_model_name= 'osnet_x0_75', max_cosine_distance=0.5, max_age=600)
+    #https://kaiyangzhou.github.io/deep-person-reid/MODEL_ZOO.html
 
     if VIDEO_SRC == 0:
         video = cv2.VideoCapture(FILE_NAME)
