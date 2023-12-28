@@ -8,9 +8,15 @@ import logging
 
 logging.basicConfig(level=logging.DEBUG)
 
-FILE_NAME =  os.path.dirname(os.path.realpath(__file__)) + '/IMG_3064.MOV'
-VIDEO_SRC = 0
+PATH = os.path.dirname(__file__)
+FILE_NAME =  os.path.join(PATH, 'IMG_3064.MOV')
 TARGET = 'person'
+
+#https://docs.ultralytics.com/modes/predict/#inference-arguments
+WIDTH = 740
+HEIGHT = 740
+
+VIDEO_SRC = 0
 
 class Detector():
 
@@ -21,14 +27,12 @@ class Detector():
 
         logging.info('Using Device: %s', self.device)
     
-    def predict(self, frame, confidence=0.7, show=False):
+    def predict(self, frame, confidence=0.3, show=False):
         self.model.to(self.device)
 
-        downscale_factor = 2
-        width = int(frame.shape[1] / downscale_factor)
-        height = int(frame.shape[0] / downscale_factor)
-        frame = cv2.resize(frame, (width, height))
-
+        original_frame = frame.copy()
+        frame = cv2.resize(frame, (WIDTH, HEIGHT))
+    
         res = self.model.predict(frame)[0] # there is only one result in the list
 
         logging.info('Prediction done')
@@ -43,8 +47,12 @@ class Detector():
         logging.debug('Coordinates: %s', str(coord))
         logging.debug('Labels: %s', str(labels))
 
-        x_shape, y_shape = frame.shape[1], frame.shape[0]
-        frame_to_show = frame.copy()
+        if show:
+            x_shape, y_shape = original_frame.shape[1], original_frame.shape[0]
+        else:
+            x_shape, y_shape = frame.shape[1], frame.shape[0]
+            
+        frame_to_show = original_frame.copy()
 
         detections = []
         for i in range(len(labels)):
@@ -62,15 +70,15 @@ class Detector():
         if show:     
             bgr = (0, 0, 255)           
             for i in detections:
-                index = i[0]
-                x1, y1, x2, y2 = index
+                bb = i[0]
+                x1, y1, x2, y2 = bb
                 cv2.rectangle(frame_to_show, (x1, y1), (x2, y2), bgr, 2)
             
-            frame_to_show = cv2.resize(frame_to_show, (int(width/2), int(height/2)))
+            frame_to_show = cv2.resize(frame_to_show, (720, 720))
             cv2.imshow('frame', frame_to_show)
             cv2.waitKey(0)
 
-        return detections
+        return frame, detections
         
     
     def _class_to_label(self, x):
@@ -90,7 +98,7 @@ if __name__ == '__main__':
     else:
         frame = cv2.imread('test.jpg')
         height, width = frame.shape[:2]
-        detections = detector.predict(frame, show=True)
+        frame, detections = detector.predict(frame, show=True)
         print(detections)
         cv2.imshow('frame', cv2.resize(frame, (int(width/2), int(height/2))))
         cv2.waitKey(0)
@@ -100,12 +108,14 @@ if __name__ == '__main__':
 
     while True:
         _, frame = video.read()
+
+        logging.debug('Frame shape: %s', str(frame.shape))
+
         if frame is None:
             print('last frame')
             break
-        frame = cv2.flip(frame, 1)
-        height, width = frame.shape[:2]
-        detections = detector.predict(frame, show=True)
+
+        frame, detections = detector.predict(frame, show=True)
         
         # tracks = tracker.update_tracks(detections, frame=frame)
         
@@ -124,3 +134,4 @@ if __name__ == '__main__':
 
     video.release()
     cv2.destroyAllWindows()
+    torch.cuda.empty_cache()
