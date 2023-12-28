@@ -27,16 +27,7 @@ class Detector():
 
         logging.info('Using Device: %s', self.device)
     
-    def predict(self, frame, confidence=0.3, show=False):
-        self.model.to(self.device)
-
-        original_frame = frame.copy()
-        frame = cv2.resize(frame, (WIDTH, HEIGHT))
-    
-        res = self.model.predict(frame)[0] # there is only one result in the list
-
-        logging.info('Prediction done')
-
+    def _extract_detections(self, res, confidence, resized_frame, frame):
         boxes = res.boxes
         confidences = boxes.conf
         coord = boxes.xyxyn.cpu().numpy()   
@@ -47,29 +38,48 @@ class Detector():
         logging.debug('Coordinates: %s', str(coord))
         logging.debug('Labels: %s', str(labels))
 
-        if show:
-            x_shape, y_shape = original_frame.shape[1], original_frame.shape[0]
-        else:
-            x_shape, y_shape = frame.shape[1], frame.shape[0]
-            
-        frame_to_show = original_frame.copy()
+        x_shape = resized_frame.shape[1]
+        y_shape = resized_frame.shape[0]
 
+        x_shape_plot = frame.shape[1]
+        y_shape_plot = frame.shape[0]
+
+        plot_bb = []
         detections = []
         for i in range(len(labels)):
             row = coord[i]
 
             if confidences[i] >= confidence and self._class_to_label(labels[i]) == TARGET:
                 x1, y1, x2, y2 = int(row[0]*x_shape), int(row[1]*y_shape), int(row[2]*x_shape), int(row[3]*y_shape)
+                detections.append([[x1, y1, x2-x1, y2-y1], confidences[i], int(labels[i])])
 
-                detections.append([[x1, y1, x2-x1, y2-y1], confidences[i], int(labels[i])]) if not show else None
-                detections.append([[x1, y1, x2, y2], confidences[i], int(labels[i])]) if show else None
+                x1, y1, x2, y2 = int(row[0]*x_shape_plot), int(row[1]*y_shape_plot), int(row[2]*x_shape_plot), int(row[3]*y_shape_plot)
+                plot_bb.append([[x1, y1, x2, y2], confidences[i], int(labels[i])])
 
                 #     x_center = x1 + (x2-x1)
                 #     y_center = y1 + ((y2-y1) / 2)
+        
+        return detections, plot_bb
 
-        if show:     
-            bgr = (0, 0, 255)           
-            for i in detections:
+
+    
+    def predict(self, frame, confidence=0.3, show=False):
+        self.model.to(self.device)
+
+        resized_frame = cv2.resize(frame, (WIDTH, HEIGHT))
+    
+        res = self.model.predict(resized_frame)[0] # there is only one result in the list
+
+        logging.info('Prediction done')
+
+        detections, plot_bb = self._extract_detections(res, confidence, resized_frame, frame)
+
+        if show:
+
+            frame_to_show = frame.copy()            
+            bgr = (0, 0, 255) 
+
+            for i in plot_bb:
                 bb = i[0]
                 x1, y1, x2, y2 = bb
                 cv2.rectangle(frame_to_show, (x1, y1), (x2, y2), bgr, 2)
@@ -77,8 +87,8 @@ class Detector():
             frame_to_show = cv2.resize(frame_to_show, (720, 720))
             cv2.imshow('frame', frame_to_show)
             cv2.waitKey(0)
-
-        return frame, detections
+    
+        return resized_frame, detections
         
     
     def _class_to_label(self, x):
@@ -114,8 +124,10 @@ if __name__ == '__main__':
         if frame is None:
             print('last frame')
             break
+        
+        
 
-        frame, detections = detector.predict(frame, show=True)
+        resized_frame, detections = detector.predict(frame, show=True)
         
         # tracks = tracker.update_tracks(detections, frame=frame)
         
