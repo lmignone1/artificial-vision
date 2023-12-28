@@ -3,14 +3,15 @@ import cv2
 import numpy as np
 import os, sys
 from deep_sort_realtime.deepsort_tracker import *
+from ultralytics import YOLO
 
 FILE_NAME =  os.path.dirname(os.path.realpath(__file__)) + '/IMG_3064.MOV'
 
-VIDEO_SRC = 1
+VIDEO_SRC = 0
 class YoloDetector():
 
     def __init__(self):
-        self.model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+        self.model = YOLO('yolov5s.pt')
         self.classes = self.model.names
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         print('Using Device:', self.device)
@@ -23,9 +24,9 @@ class YoloDetector():
         frame = cv2.resize(frame, (width, height))
 
         results = self.model(frame)
-        
+        print('***********************+', results)
         #print(results.pandas().xyxy[0])
-        labels, cord = results.xyxyn[0].cpu(), results.xyxyn[0].cpu()
+        labels, cord = results[0].xyxyn[0].cpu(), results[0].xyxyn[0].cpu()
         labels, cord = labels[:, -1].numpy(), cord[:, :-1].numpy()
         return labels, cord
     
