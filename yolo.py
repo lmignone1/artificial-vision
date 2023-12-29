@@ -85,7 +85,7 @@ class Detector():
                 x1, y1, x2, y2 = bb
                 cv2.rectangle(frame_to_show, (x1, y1), (x2, y2), bgr, 2)
             
-            frame_to_show = cv2.resize(frame_to_show, (640, 480))
+            frame_to_show = cv2.resize(frame_to_show, (540, 640))
             cv2.imshow('frame', frame_to_show)
             cv2.waitKey(0)
     
