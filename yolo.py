@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.DEBUG)
 PATH = os.path.dirname(__file__)
 FILE_NAME =  os.path.join(PATH, 'video', 'video0.mp4')
 TARGET = 'person'
+CLASSES = [0, 24, 26, 28]
 
 #https://docs.ultralytics.com/modes/predict/#inference-arguments
 HEIGHT = 640
@@ -21,13 +22,13 @@ VIDEO_SRC = 0
 class Detector():
 
     def __init__(self):
-        self.model = YOLO('yolov5s.pt')
+        self.model = YOLO('yolov5su.pt')
         self.classes = self.model.names
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         logging.info('Using Device: %s', self.device)
     
-    def _extract_detections(self, res, confidence, resized_frame, frame):
+    def _extract_detections(self, res, resized_frame, frame):
         boxes = res.boxes
         confidences = boxes.conf
         coord = boxes.xyxyn.cpu().numpy()   
@@ -49,7 +50,7 @@ class Detector():
         for i in range(len(labels)):
             row = coord[i]
 
-            if confidences[i] >= confidence and self._class_to_label(labels[i]) == TARGET:
+            if self._class_to_label(labels[i]) == TARGET:
                 x1, y1, x2, y2 = int(row[0]*x_shape), int(row[1]*y_shape), int(row[2]*x_shape), int(row[3]*y_shape)
                 detections.append([[x1, y1, x2-x1, y2-y1], confidences[i], int(labels[i])])
 
@@ -63,16 +64,16 @@ class Detector():
 
 
     
-    def predict(self, frame, confidence=0.3, show=False):
+    def predict(self, frame, confidence=0.60, show=False):
         self.model.to(self.device)
 
         resized_frame = cv2.resize(frame, (WIDTH, HEIGHT))
     
-        res = self.model.predict(resized_frame, imgsz = 960)[0] # there is only one result in the list
+        res = self.model.predict(frame, imgsz=[HEIGHT, WIDTH], conf = confidence, classes = CLASSES)[0] # there is only one result in the list
 
         logging.info('Prediction done')
 
-        detections, plot_bb = self._extract_detections(res, confidence, resized_frame, frame)
+        detections, plot_bb = self._extract_detections(res, resized_frame, frame)
 
         if show:
 
