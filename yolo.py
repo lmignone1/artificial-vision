@@ -1,10 +1,7 @@
-import torch
-import cv2
-import numpy as np
-import os, sys
 from deep_sort_realtime.deepsort_tracker import *
 from ultralytics import YOLO
-import logging
+from ultralytics.engine.results import Results, Boxes
+import logging, time, os, sys, torch, cv2
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -18,6 +15,7 @@ HEIGHT = 640
 WIDTH = 480
 
 VIDEO_SRC = 0
+SAMPLE_TIME = 1/10   # 1/fps dove fps = #immagini/secondi
 
 class Detector():
 
@@ -25,13 +23,13 @@ class Detector():
         self.model = YOLO('yolov5su.pt')
         self.classes = self.model.names
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
+        
         logging.info('Using Device: %s', self.device)
     
-    def _extract_detections(self, res, resized_frame, frame):
-        boxes = res.boxes
+    def _extract_detections(self, res : Results, resized_frame, frame):
+        boxes : Boxes = res.boxes
         confidences = boxes.conf
-        coord = boxes.xyxyn.cpu().numpy()   
+        coord = boxes.xyxyn.cpu().numpy()  # si normalizza in modo da mantenere le dimensioni e per facilita di interpretazione 
         labels = boxes.cls
         
         logging.debug('Number of boxes found: %s', len(boxes))
@@ -87,11 +85,12 @@ class Detector():
             
             frame_to_show = cv2.resize(frame_to_show, (540, 640))
             cv2.imshow('frame', frame_to_show)
-            cv2.waitKey(0)
+            if cv2.waitKey(1) & 0xFF:
+                pass
     
         return resized_frame, detections
         
-    
+
     def _class_to_label(self, x):
         return self.classes[int(x)]
     
@@ -99,11 +98,18 @@ class Detector():
 
 if __name__ == '__main__':
     detector = Detector()
-    tracker = DeepSort(max_age=60)
+    tracker = DeepSort(max_age=60)  
+    #tracker = DeepSort(embedder=EMBEDDER_CHOICES[1], embedder_model_name= 'osnet_x0_75', max_cosine_distance=0.5, max_age=600)
     #https://kaiyangzhou.github.io/deep-person-reid/MODEL_ZOO.html
 
     if VIDEO_SRC == 0:
         video = cv2.VideoCapture(FILE_NAME)
+        fps = video.get(cv2.CAP_PROP_FPS) # frames per second
+        totalNoFrames = video.get(cv2.CAP_PROP_FRAME_COUNT) # total number of frames
+        durationInSeconds = totalNoFrames / fps
+        
+        logging.info("Video duration: %s s", str(durationInSeconds))
+
     elif VIDEO_SRC == 1:
         video = cv2.VideoCapture(0)
     else:
@@ -115,22 +121,26 @@ if __name__ == '__main__':
         cv2.waitKey(0)
         sys.exit(0)
 
-
-
+    
+    sec = 0
     while True:
-        _, frame = video.read()
-
-        logging.debug('Frame shape: %s', str(frame.shape))
-
-        if frame is None:
-            print('last frame')
+        video.set(cv2.CAP_PROP_POS_MSEC,sec*1000)
+        hasFrames, frame = video.read()
+        sec += SAMPLE_TIME
+        
+        if sec > durationInSeconds or not hasFrames:
+            logging.info('Video ended')
             break
-        
-        
 
-        resized_frame, detections = detector.predict(frame, show=True)
+        sec = round(sec, 2)
         
-        # tracks = tracker.update_tracks(detections, frame=frame)
+        logging.debug('Frame shape: %s', str(frame.shape))
+        
+        resized_frame, detections = detector.predict(frame, show=True)
+
+        time.sleep(SAMPLE_TIME)
+        
+        # tracks = tracker.update_tracks(detections, frame=resized_frame)
         
         # for track in tracks:
         #     if not track.is_confirmed(): 
