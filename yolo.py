@@ -9,12 +9,12 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 PATH = os.path.dirname(__file__)
-FILE_NAME =  os.path.join(PATH, 'IMG_3064.MOV')
+FILE_NAME =  os.path.join(PATH, 'video', 'video0.mp4')
 TARGET = 'person'
 
 #https://docs.ultralytics.com/modes/predict/#inference-arguments
-WIDTH = 740
-HEIGHT = 740
+HEIGHT = 640
+WIDTH = 480
 
 VIDEO_SRC = 0
 
@@ -68,7 +68,7 @@ class Detector():
 
         resized_frame = cv2.resize(frame, (WIDTH, HEIGHT))
     
-        res = self.model.predict(resized_frame)[0] # there is only one result in the list
+        res = self.model.predict(resized_frame, imgsz = 960)[0] # there is only one result in the list
 
         logging.info('Prediction done')
 
@@ -84,7 +84,7 @@ class Detector():
                 x1, y1, x2, y2 = bb
                 cv2.rectangle(frame_to_show, (x1, y1), (x2, y2), bgr, 2)
             
-            frame_to_show = cv2.resize(frame_to_show, (720, 720))
+            frame_to_show = cv2.resize(frame_to_show, (640, 480))
             cv2.imshow('frame', frame_to_show)
             cv2.waitKey(0)
     
