@@ -1,7 +1,7 @@
 from deep_sort_realtime.deepsort_tracker import *
 from ultralytics import YOLO
 from ultralytics.engine.results import Results, Boxes
-import logging, time, os, sys, torch, cv2
+import logging,torch, cv2
 from deep_sort_realtime.deep_sort.track import Track
 
 detector_logger = logging.getLogger('yolo')
@@ -10,34 +10,29 @@ detector_logger.setLevel(logging.INFO)
 tracker_logger = logging.getLogger('deepsort')
 tracker_logger.setLevel(logging.INFO)
 
-video_logger = logging.getLogger('video')
-video_logger.setLevel(logging.INFO)
+# TRACKER
+MAX_IOU_DISTANCE = 0.6
+MAX_AGE = 75 # 75/15 = 5 secondi
+N_INIT = 15 # 15/15 = 1 secondo
+MAX_COSINE_DISTANCE = 0.25
+NN_BUDGET = 5
 
-logging.basicConfig(level=logging.DEBUG) # ci deve essere in modo che i logger funzionino. Settare il livello lo fa a livello globale
-
-PATH = os.path.dirname(__file__)
-
-NUMBER_OF_VIDEO = 7
-VIDEO_SRC = 0
-
-FILE_NAME =  os.path.join(PATH, 'video', f'video{NUMBER_OF_VIDEO}.mp4')
-SAMPLE_TIME = 1/15   # 1/fps dove fps = #immagini/secondi
-
+# DETECTOR
 #https://docs.ultralytics.com/modes/predict/#inference-arguments
 # inserendo HEIGHT e WIDTH pari a 640 e 480 abbiamo prestazioni peggiori del detector rispetto a quando sono 576 e 352
+
 HEIGHT = 576 # se metto 640 abbiamo uguali performance 
 WIDTH = 352
 TARGET = 'person'
-CLASSES = [0, 24, 26, 28]
-
+CLASSES = [0, 24, 26, 28] # 0 = person, 24 = handbag, 26 = backpack, 28 = suitcase
 
 class System():
 
     def __init__(self):
         self.detector = YOLO('yolov8s.pt')
-        self.detector_classes = self.detector.names
+        self.classes = self.detector.names
         
-        self.tracker = DeepSort(max_iou_distance=0.6, max_age=75, n_init=15, max_cosine_distance=0.25, nn_budget=5)  
+        self.tracker = DeepSort(max_iou_distance=MAX_IOU_DISTANCE, max_age=MAX_AGE, n_init=N_INIT, max_cosine_distance=MAX_COSINE_DISTANCE, nn_budget=NN_BUDGET)  
         # max_io_distance con 0.7 significa che 2 bb devono avere una distanza massima del 70 %. piu è alto e piu tollerante è il tracker
         # max_age = 30 è il numero di frame in cui un oggetto non viene rilevato prima di essere eliminato. Essendo fps = 10, allora abbiamo 3 secondi prima di rimuovere l oggettoà
         # n_init = 10  è il numero di frame in cui un oggetto deve essere rilevato prima di essere considerato un oggetto vero e proprio. Impiega 1 secondo
@@ -48,7 +43,7 @@ class System():
         #https://kaiyangzhou.github.io/deep-person-reid/MODEL_ZOO.html
         
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        video_logger.info('Using Device: %s', self.device)
+        detector_logger.info('Using Device: %s', self.device)
     
     def _extract_detections(self, res : Results, frame):
         boxes : Boxes = res.boxes
@@ -129,47 +124,5 @@ class System():
         
 
     def _class_to_label(self, x):
-        return self.detector_classes[int(x)]
+        return self.classes[int(x)]
     
-   
-
-if __name__ == '__main__':
-    system = System()
-
-    if VIDEO_SRC == 0:
-        video = cv2.VideoCapture(FILE_NAME)
-        fps = video.get(cv2.CAP_PROP_FPS) # frames per second
-        totalNoFrames = video.get(cv2.CAP_PROP_FRAME_COUNT) # total number of frames
-        durationInSeconds = totalNoFrames / fps
-        
-        video_logger.info("Video duration: %s s", str(durationInSeconds))
-
-    elif VIDEO_SRC == 1:
-        video = cv2.VideoCapture(0)
-
-    sec = 0
-    while True:
-        video.set(cv2.CAP_PROP_POS_MSEC,sec*1000)
-        hasFrames, frame = video.read()
-        sec += SAMPLE_TIME
-        
-        if sec > durationInSeconds or not hasFrames:
-            video_logger.info('Video ended')
-            break
-
-        sec = round(sec, 2)
-        
-        frame = cv2.resize(frame, (WIDTH, HEIGHT))
-        video_logger.debug('Frame shape: %s', str(frame.shape))
-        
-        detections = system.predict(frame, show=True)
-
-        tracks = system.update_tracks(detections, frame=frame, show=True)
-        
-        time.sleep(SAMPLE_TIME)
-        
-        
-
-    video.release()
-    cv2.destroyAllWindows()
-    torch.cuda.empty_cache()
