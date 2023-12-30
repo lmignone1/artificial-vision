@@ -1,2 +1,18 @@
 caricare i video attraverso il cavo 
 
+
+
+
+sul video 4, il ciccione seduto non viene visto con yolo. Forse meglio con i parametri:
+HEIGHT_DETECTOR = 720
+WIDTH_DETECTOR = 416
+
+HEIGHT_TRACKER = 736
+WIDTH_TRACKER = 416
+
+Sicuro lo vede con 
+
+HEIGHT_DETECTOR = 1080
+WIDTH_DETECTOR = 1928
+
+vedere i parametri di HEIGHT_TRACKER e WIDTH_TRACKER

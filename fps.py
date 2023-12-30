@@ -3,7 +3,7 @@ import os
 
 
 PATH = os.path.dirname(__file__)
-FILE_NAME =  os.path.join(PATH, 'video', 'video0.mp4')
+FILE_NAME =  os.path.join(PATH, 'video', 'video7.mp4')
 
 count=1
 vidcap = cv2.VideoCapture(FILE_NAME)
@@ -23,7 +23,7 @@ def getFrame(sec):
             pass
     return hasFrames
 sec = 0
-frameRate = 1/(2/5) # Change this number to 1 for each 1 second fps = #immagini/secondi
+frameRate = 1/(10) # Change this number to 1 for each 1 second fps = #immagini/secondi
     
 
 while True:
