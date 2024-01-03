@@ -3,6 +3,7 @@ from ultralytics import YOLO
 from ultralytics.engine.results import Results, Boxes
 import logging,torch, cv2
 from deep_sort_realtime.deep_sort.track import Track
+import os
 
 detector_logger = logging.getLogger('yolo')
 detector_logger.setLevel(logging.INFO)
@@ -20,7 +21,7 @@ NN_BUDGET = 5
 # DETECTOR
 #https://docs.ultralytics.com/modes/predict/#inference-arguments
 # inserendo HEIGHT e WIDTH pari a 640 e 480 abbiamo prestazioni peggiori del detector rispetto a quando sono 576 e 352
-
+MODEL = 'yolov8s.pt'
 HEIGHT = 576 # se metto 640 abbiamo uguali performance 
 WIDTH = 352
 TARGET = 'person'
@@ -29,7 +30,7 @@ CLASSES = [0, 24, 26, 28] # 0 = person, 24 = handbag, 26 = backpack, 28 = suitca
 class System():
 
     def __init__(self):
-        self.detector = YOLO('yolov8s.pt')
+        self.detector = YOLO(os.path.join(os.path.dirname(__file__), 'models', MODEL))
         self.classes = self.detector.names
         
         self.tracker = DeepSort(max_iou_distance=MAX_IOU_DISTANCE, max_age=MAX_AGE, n_init=N_INIT, max_cosine_distance=MAX_COSINE_DISTANCE, nn_budget=NN_BUDGET)  

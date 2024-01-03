@@ -8,10 +8,9 @@ logging.basicConfig() # livello globale
 
 PATH = os.path.dirname(__file__)
 
-NUMBER_OF_VIDEO = 7
+VIDEO = 7
 
 SRC = 0 # 0 = video, 1 = webcam
-VIDEO_NAME =  os.path.join(PATH, 'video', f'video{NUMBER_OF_VIDEO}.mp4')
 SAMPLE_TIME = 1/15   # 1/fps dove fps = #immagini/secondi
 
 SHOW = True
@@ -19,7 +18,7 @@ SHOW = True
 system = System()
 
 if SRC == 0:
-    video = cv2.VideoCapture(VIDEO_NAME)
+    video = cv2.VideoCapture(os.path.join(PATH, 'video', f'video{VIDEO}.mp4'))
     fps = video.get(cv2.CAP_PROP_FPS) # frames per second
     total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT) # total number of frames
     duration_seconds = total_frames / fps
@@ -28,6 +27,7 @@ if SRC == 0:
 
 elif SRC == 1:
     video = cv2.VideoCapture(0)
+    duration_seconds = None
 
 sec = 0
 while True:
@@ -35,7 +35,7 @@ while True:
     hasFrames, frame = video.read()
     sec += SAMPLE_TIME
     
-    if sec > duration_seconds or not hasFrames:
+    if duration_seconds is not None and (sec > duration_seconds or not hasFrames):
         logger.info('Video ended')
         break
 
