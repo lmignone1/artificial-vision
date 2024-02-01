@@ -58,17 +58,55 @@ def crop_image(detections):
             center_y = y + h // 2
             point_color = (0, 255, 0)  # Colore verde
             point_radius = 5  # Raggio del punto
-
-            cv2.circle(frame, (int(center_x), int(center_y)), point_radius, point_color, -1)  # -1 riempie il cerchio
-
+            #cv2.circle(frame, (int(center_x), int(center_y)), point_radius, point_color, -1)  # -1 riempie il cerchio
             
+
             # Visualizza l'immagine solo se la bounding box ha dimensioni valide
             if w > 0 and h > 0:
                 cv2.imshow("Cropped Image", cropped_img)
                 #cv2.waitKey(0)  # Aspetta un tasto per chiudere l'immagine
+            
+            
     return cropped_img, center_x, center_y
 
+def tracking():
+        tracks = system.update_tracks(detections, frame=frame, show=SHOW)
+
+        for track in tracks:
+            if track.is_confirmed():
+                track_id = track.track_id
+                print(f"ID della traccia: {track_id}")
+
+            # Ottenere le coordinate del bounding box
+                bb = track.to_ltrb()
+                x_min, y_min, x_max, y_max = map(int, bb)
+
+                #print(f"Coordinate del bounding box: x_min={x_min}, y_min={y_min}, x_max={x_max}, y_max={y_max}")
+
+                # Centro dei bounding box
+                center_x1 = (x_min + x_max)// 2
+                center_y1 = (y_min + y_max) // 2
+                #point_color = (0, 0, 255)  # Colore verde
+                #point_radius = 5  # Raggio del punto
+                #print(center_x1)
+                #print(center_y1)
+            
+
+                #cv2.circle(frame, (int(center_x1), int(center_y1)), point_radius, point_color, -1)
+
+                if roi1_x <= center_x1 <= (roi1_x + roi1_w) and roi1_y <= center_y1 <= (roi1_y + roi1_h):
+                    print("Il punto si trova all'interno di ROI1")
+                else:
+                    print("Il punto non si trova all'interno di ROI1")
+                # Verifica se il punto si trova all'interno di roi2
+                if roi2_x <= center_x1 <= roi2_x + roi2_w and roi2_y <= center_y1 <= roi2_y + roi2_h:
+                    print("Il punto si trova all'interno di ROI2")
+                else:
+                    print("Il punto non si trova all'interno di ROI2")
+
+
 sec = 0
+
 while True:
     video.set(cv2.CAP_PROP_POS_MSEC, sec*1000)
     hasFrames, frame = video.read()
@@ -99,28 +137,15 @@ while True:
 
     detections = system.predict(frame, show=SHOW)
     crop, center_x, center_y = crop_image(detections)
+    #cv2.imshow("Cropped", crop)
     ################################
     ############################### NON SI TROVA CON LA CORDINATA X
-    print(center_x, '----', roi1_x, '----', roi1_x+roi1_w)
-    print(center_y)
+    #print(center_x, '----', roi1_x, '----', roi1_x+roi1_w)
+    #print(center_y)
+    #print('---------------')
+    #print(f"center_x: {center_x}, roi1_x: {roi1_x}, roi1_w: {roi1_w}")
     
-    #controllo se il centro di boung box è in roi1 o roi2
-    # Verifica se il punto si trova all'interno di roi1
-    if roi1_x <= center_x <= roi1_x + roi1_w or roi1_y <= center_y <= roi1_y + roi1_h:
-        print("Il punto si trova all'interno di ROI1")
-    else:
-        print("Il punto non si trova all'interno di ROI1")
-
-    # Verifica se il punto si trova all'interno di roi2
-    if roi2_x <= center_x <= roi2_x + roi2_w and roi2_y <= center_y <= roi2_y + roi2_h:
-        print("Il punto si trova all'interno di ROI2")
-    else:
-        print("Il punto non si trova all'interno di ROI2")
-
-
-    tracks = system.update_tracks(detections, frame=frame, show=SHOW)
-    
-    #### Se crop lo metti qui, sembra metterci tantissimo
+    tracking()
     
 
     time.sleep(SAMPLE_TIME)

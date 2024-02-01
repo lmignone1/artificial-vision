@@ -120,7 +120,7 @@ class System():
             cv2.imshow('YOLO', frame_to_show)
             if cv2.waitKey(1) & 0xFF:
                 pass
-    
+                 
         return detections
         
 
