@@ -13,7 +13,7 @@ logging.basicConfig()  # livello globale
 
 PATH = os.path.dirname(__file__)
 
-VIDEO = 7
+VIDEO = 2
 
 SRC = 0  # 0 = video, 1 = webcam
 SAMPLE_TIME = 1/15  # 1/fps dove fps = #immagini/secondi
@@ -70,39 +70,66 @@ def crop_image(detections):
     return cropped_img, center_x, center_y
 
 def tracking():
-        tracks = system.update_tracks(detections, frame=frame, show=SHOW)
 
-        for track in tracks:
-            if track.is_confirmed():
-                track_id = track.track_id
-                print(f"ID della traccia: {track_id}")
+    # Inizializza un dizionario per tracciare il tempo totale di permanenza e il numero di entrate per ciascun ID nelle ROI
+    
+
+    tracks = system.update_tracks(detections, frame=frame, show=SHOW)
+
+    for track in tracks:
+        if track.is_confirmed():
+            track_id = track.track_id
+
+            # Verifica se l'ID è già presente nel dizionario
+            if track_id not in total_info:
+                total_info[track_id] = {"ROI1": {"time": 0, "entrances": 0, "inside": False},
+                                        "ROI2": {"time": 0, "entrances": 0, "inside": False}}
 
             # Ottenere le coordinate del bounding box
-                bb = track.to_ltrb()
-                x_min, y_min, x_max, y_max = map(int, bb)
+            bb = track.to_ltrb()
+            x_min, y_min, x_max, y_max = map(int, bb)
 
-                #print(f"Coordinate del bounding box: x_min={x_min}, y_min={y_min}, x_max={x_max}, y_max={y_max}")
+            # Centro dei bounding box
+            center_x1 = (x_min + x_max) // 2
+            center_y1 = (y_min + y_max) // 2
 
-                # Centro dei bounding box
-                center_x1 = (x_min + x_max)// 2
-                center_y1 = (y_min + y_max) // 2
-                #point_color = (0, 0, 255)  # Colore verde
-                #point_radius = 5  # Raggio del punto
-                #print(center_x1)
-                #print(center_y1)
-            
+            # Verifica se il punto si trova all'interno di ROI1
+            if roi1_x <= center_x1 <= (roi1_x + roi1_w) and roi1_y <= center_y1 <= (roi1_y + roi1_h):
+                if not total_info[track_id]["ROI1"]["inside"]:
+                    total_info[track_id]["ROI1"]["entrances"] += 1
+                    total_info[track_id]["ROI1"]["inside"] = True
 
-                #cv2.circle(frame, (int(center_x1), int(center_y1)), point_radius, point_color, -1)
+                # Aggiorna il tempo totale di permanenza nella ROI1 per l'ID
+                total_info[track_id]["ROI1"]["time"] += SAMPLE_TIME
 
-                if roi1_x <= center_x1 <= (roi1_x + roi1_w) and roi1_y <= center_y1 <= (roi1_y + roi1_h):
-                    print("Il punto si trova all'interno di ROI1")
-                else:
-                    print("Il punto non si trova all'interno di ROI1")
-                # Verifica se il punto si trova all'interno di roi2
-                if roi2_x <= center_x1 <= roi2_x + roi2_w and roi2_y <= center_y1 <= roi2_y + roi2_h:
-                    print("Il punto si trova all'interno di ROI2")
-                else:
-                    print("Il punto non si trova all'interno di ROI2")
+            else:
+                total_info[track_id]["ROI1"]["inside"] = False
+
+            # Verifica se il punto si trova all'interno di ROI2
+            if roi2_x <= center_x1 <= roi2_x + roi2_w and roi2_y <= center_y1 <= roi2_y + roi2_h:
+                if not total_info[track_id]["ROI2"]["inside"]:
+                    total_info[track_id]["ROI2"]["entrances"] += 1
+                    total_info[track_id]["ROI2"]["inside"] = True
+
+                # Aggiorna il tempo totale di permanenza nella ROI2 per l'ID
+                total_info[track_id]["ROI2"]["time"] += SAMPLE_TIME
+
+            else:
+                total_info[track_id]["ROI2"]["inside"] = False
+
+    # Stampa la lista di tempi di permanenza e entrate
+    print("List with residence time and entries in the ROIs:")
+    for track_id, info in total_info.items():
+        print(f"ID {track_id}: ROI1 - Time: {info['ROI1']['time']}, Entrances: {info['ROI1']['entrances']}")
+        print(f"ID {track_id}: ROI2 - Time: {info['ROI2']['time']}, Entrances: {info['ROI2']['entrances']}")
+
+
+
+
+
+
+
+
 
 
 sec = 0
@@ -136,7 +163,7 @@ while True:
     
 
     detections = system.predict(frame, show=SHOW)
-    crop, center_x, center_y = crop_image(detections)
+    #crop, center_x, center_y = crop_image(detections)
     #cv2.imshow("Cropped", crop)
     ################################
     ############################### NON SI TROVA CON LA CORDINATA X

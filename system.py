@@ -27,6 +27,10 @@ WIDTH = 352
 TARGET = 'person'
 CLASSES = [0, 24, 26, 28] # 0 = person, 24 = handbag, 26 = backpack, 28 = suitcase
 
+# dizionario che ha come chiave id della persona e come valori una tupla con time, entrances e 
+# un boolenao di nome inside che mi dice se la persona è entrata o uscita
+total_info = {}
+
 class System():
 
     def __init__(self):
