@@ -1,19 +1,20 @@
 from system import *
 import os, time
+from tracks import *
 
 logger = logging.getLogger(os.path.basename(__file__))
 logger.setLevel(logging.INFO)
 
-logging.basicConfig() # livello globale
+logging.basicConfig(level=logging.DEBUG) # livello globale
 
 PATH = os.path.dirname(__file__)
 
 VIDEO = 7
 
 SRC = 0 # 0 = video, 1 = webcam
-SAMPLE_TIME = 1/15   # 1/fps dove fps = #immagini/secondi
 
-SHOW = True
+SHOW_DETECTOR = False
+SHOW_TRACKER = True
 
 system = System()
 
@@ -44,9 +45,26 @@ while True:
     frame = cv2.resize(frame, (WIDTH, HEIGHT))
     logger.debug('Frame shape: %s', str(frame.shape))
     
-    detections = system.predict(frame, show=SHOW)
+    system.print_roi(frame)
+    detections = system.predict(frame, show=SHOW_DETECTOR)
+    tracks = system.update_tracks(detections, frame=frame, show=SHOW_TRACKER)
 
-    tracks = system.update_tracks(detections, frame=frame, show=SHOW)
+    track : CustomTrack
+    for track in tracks:
+        
+        if track.is_tentative():
+            tracker_logger.debug('track is tentative %s', track.track_id)
+            continue
+
+        if track.is_confirmed():
+            tracker_logger.debug('track is confirmed %s', track.track_id)
+            system.update_roi(track)
+
+            # se io counter par < N allora classificazione altrimenti stop.Quindi procedo con il massimo . 
+            # alle prossime iterazioni essendo confermata la classificazione non faremo piu calcoli per quel track
+
+        if not track.is_confirmed() or track.is_deleted(): 
+            continue
     
     time.sleep(SAMPLE_TIME)
     
