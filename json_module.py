@@ -2,6 +2,9 @@ import json, os, sys
 import logging
 from tracks import CustomTrack
 
+json_logger = logging.getLogger('json')
+json_logger.setLevel(logging.INFO)
+
 PERSON = {
     "id": 0,
     "gender" : "",
@@ -23,24 +26,23 @@ class FileJson():
 
     def __init__(self, path):
         self._path = os.path.join(os.path.dirname(__file__), path)
-        
     
-    def reader_roi(self):
+    def read_roi(self):
         try:
             with open(self._path, "r") as f:
                 file = json.load(f)
                 roi1 = file["roi1"]
                 roi2 = file["roi2"]
-                logging.info(f'File {os.path.basename(self._path)} loaded')
+                json_logger.info(f'File {os.path.basename(self._path)} loaded')
         except:
-            logging.error(f'File {os.path.basename(self._path)} not found')
+            json_logger.error(f'File {os.path.basename(self._path)} not found')
             sys.exit(1)
         
         return roi1, roi2
     
-    def writer_par(self, par_dict : dict):
+    def write_par(self, par_dict : dict):
         data = PEOPLE.copy()
-        par_dict = sorted(list(par_dict.keys()))
+        par_dict = dict(sorted(par_dict.items()))
 
         v : CustomTrack
         for _, v in par_dict.items():
@@ -62,9 +64,9 @@ class FileJson():
         try:
             with open(self._path, 'w') as f:
                 json.dump(data, f, indent=4)
-                logging.info(f'File {os.path.basename(self._path)} written')
+                json_logger.info(f'File {os.path.basename(self._path)} written')
         except:
-            logging.error(f'File {os.path.basename(self._path)} not written')
+            json_logger.error(f'File {os.path.basename(self._path)} not written')
             sys.exit(1)
    
 

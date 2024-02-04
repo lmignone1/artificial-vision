@@ -56,7 +56,7 @@ class System():
         #https://kaiyangzhou.github.io/deep-person-reid/MODEL_ZOO.html
 
         reader = FileJson(path_roi)
-        roi1, roi2 = reader.reader_roi()
+        roi1, roi2 = reader.read_roi()
 
         roi1 = (int(WIDTH * roi1['x']), int(HEIGHT * roi1['y']), int(WIDTH * roi1['width']), int(HEIGHT * roi1['height'])) 
         roi2 = (int(WIDTH * roi2['x']), int(HEIGHT * roi2['y']), int(WIDTH * roi2['width']), int(HEIGHT * roi2['height']))

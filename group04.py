@@ -71,7 +71,7 @@ while True:
     time.sleep(SAMPLE_TIME)
 
 writer = FileJson(args.results)
-# writer.writer_par(tracks_dict)
+# writer.write_par(tracks_dict)
 video.release()
 cv2.destroyAllWindows()
 torch.cuda.empty_cache()
