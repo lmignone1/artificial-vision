@@ -1,34 +1,36 @@
 from system import *
 import os, time
 from tracks import *
+import argparse as ap
 
-logger = logging.getLogger(os.path.basename(__file__))
+logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
 
 logging.basicConfig(level=logging.DEBUG) # livello globale
 
 PATH = os.path.dirname(__file__)
 
-VIDEO = 7
-
-SRC = 0 # 0 = video, 1 = webcam
-
 SHOW_DETECTOR = False
 SHOW_TRACKER = True
 
-system = System()
 
-if SRC == 0:
-    video = cv2.VideoCapture(os.path.join(PATH, 'video', f'video{VIDEO}.mp4'))
-    fps = video.get(cv2.CAP_PROP_FPS) # frames per second
-    total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT) # total number of frames
-    duration_seconds = total_frames / fps
-    
-    logger.info("Video duration: %s s", str(duration_seconds))
+def get_args():
+    parser = ap.ArgumentParser(description='Detection and tracking for PAR')
+    parser.add_argument('-v', '--video', help='name of the video to run', type=str, required=True)
+    parser.add_argument('-c', '--configuration', help='configuration file for setting the two rois', default='config.txt', type=str)
+    parser.add_argument('-r', '--results', help='result file for writing all tracks', default='results.txt', type=str)
+    return parser.parse_args()
 
-elif SRC == 1:
-    video = cv2.VideoCapture(0)
-    duration_seconds = None
+args = get_args()
+
+system = System(args.configuration)
+
+video = cv2.VideoCapture(os.path.join(PATH, args.video))
+fps = video.get(cv2.CAP_PROP_FPS) # frames per second
+total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT) # total number of frames
+duration_seconds = total_frames / fps
+
+logger.info("Video duration: %s s", str(duration_seconds))
 
 sec = 0
 while True:
@@ -36,7 +38,7 @@ while True:
     hasFrames, frame = video.read()
     sec += SAMPLE_TIME
     
-    if duration_seconds is not None and (sec > duration_seconds or not hasFrames):
+    if sec > duration_seconds or not hasFrames:
         logger.info('Video ended')
         break
 
@@ -67,7 +69,9 @@ while True:
             continue
     
     time.sleep(SAMPLE_TIME)
-    
+
+writer = FileJson(args.results)
+# writer.writer_par(tracks_dict)
 video.release()
 cv2.destroyAllWindows()
 torch.cuda.empty_cache()

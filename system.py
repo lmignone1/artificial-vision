@@ -9,6 +9,7 @@ from par import *
 import torch
 import torchvision.transforms as transforms
 import numpy as np
+from json_module import *
 
 detector_logger = logging.getLogger('yolo')
 detector_logger.setLevel(logging.INFO)
@@ -40,7 +41,7 @@ CLASSES = [0] # 0 = person
 
 class System():
 
-    def __init__(self):
+    def __init__(self, path_roi):
         self.detector = YOLO(os.path.join(os.path.dirname(__file__), 'models', MODEL))
         self.classes = self.detector.names
         
@@ -53,9 +54,12 @@ class System():
 
         #tracker = DeepSort(embedder=EMBEDDER_CHOICES[1], embedder_model_name= 'osnet_x0_75', max_cosine_distance=0.5, max_age=600)
         #https://kaiyangzhou.github.io/deep-person-reid/MODEL_ZOO.html
-        
-        roi1 = (int(WIDTH * 0.1), int(HEIGHT * 0.2), int(WIDTH * 0.4), int(HEIGHT * 0.4)) # leggere da file json 
-        roi2 = (int(WIDTH * 0.5), int(HEIGHT * 0.7), int(WIDTH * 0.5), int(HEIGHT * 0.3))
+
+        reader = FileJson(path_roi)
+        roi1, roi2 = reader.reader_roi()
+
+        roi1 = (int(WIDTH * roi1['x']), int(HEIGHT * roi1['y']), int(WIDTH * roi1['width']), int(HEIGHT * roi1['height'])) 
+        roi2 = (int(WIDTH * roi2['x']), int(HEIGHT * roi2['y']), int(WIDTH * roi2['width']), int(HEIGHT * roi2['height']))
 
         self._roi1_x, self._roi1_y, self._roi1_w, self._roi1_h = roi1
         self._roi2_x, self._roi2_y, self._roi2_w, self._roi2_h = roi2
@@ -182,8 +186,8 @@ class System():
         else:
             track._roi2_inside = False
         
-        par_logger.info(f"ID {track.track_id}: ROI1 - Time: {track._roi1_time}, Entrances: {track._roi1_transit}")
-        par_logger.info(f"ID {track.track_id}: ROI2 - Time: {track._roi2_time}, Entrances: {track._roi2_transit}")
+        par_logger.debug(f"ID {track.track_id}: ROI1 - Time: {track._roi1_time}, Entrances: {track._roi1_transit}")
+        par_logger.debug(f"ID {track.track_id}: ROI2 - Time: {track._roi2_time}, Entrances: {track._roi2_transit}")
 
     def update_par(self, track : CustomTrack, frame):
         self._crop_image(track, frame, show=SHOW_CROP)
