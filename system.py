@@ -20,7 +20,6 @@ tracker_logger.setLevel(logging.INFO)
 par_logger = logging.getLogger('par')
 par_logger.setLevel(logging.DEBUG)
 
-SHOW_CROP = False
 SAMPLE_TIME = 1/15   # 1/fps dove fps = #immagini/secondi
 
 # TRACKER
@@ -64,6 +63,10 @@ class System():
         self._roi1_x, self._roi1_y, self._roi1_w, self._roi1_h = roi1
         self._roi2_x, self._roi2_y, self._roi2_w, self._roi2_h = roi2
 
+        self.par_model = AttributeRecognitionModel(num_attributes=5)
+        self.par_model.load_state_dict(torch.load(os.path.join(os.path.dirname(__file__), 'par_models', 'best_model.pth')))
+        self.par_model.eval()
+
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         detector_logger.info('Using Device: %s', self.device)
     
@@ -94,7 +97,8 @@ class System():
         return detections, plot_bb
 
     def update_tracks(self, detections, frame, show=False):
-        tracks = self.tracker.update_tracks(detections, frame=frame)
+        frame_tracks = frame.copy()
+        tracks = self.tracker.update_tracks(detections, frame=frame_tracks)
         
         if show:
             frame_to_show = frame.copy()
@@ -119,16 +123,17 @@ class System():
         return tracks
     
     def predict(self, frame, confidence=0.6, show=False):
+        frame_predict = frame.copy()
         self.detector.to(self.device)
-        res = self.detector.predict(frame, imgsz=[HEIGHT, WIDTH], conf = confidence, classes = CLASSES)[0] # there is only one result in the list
-        detections, plot_bb = self._extract_detections(res, frame)
+        res = self.detector.predict(frame_predict, imgsz=[HEIGHT, WIDTH], conf = confidence, classes = CLASSES)[0] # there is only one result in the list
+        detections, plot_bb = self._extract_detections(res, frame_predict)
 
         if show:
             frame_to_show = frame.copy()
             for i in plot_bb:
                 bb = i[0]
                 x1, y1, x2, y2 = bb
-                cv2.rectangle(frame_to_show, (x1, y1), (x2, y2), (0, 0, 255), 2)
+                cv2.rectangle(frame_to_show, (x1, y1), (x2, y2), (0, 0, 255), 2) # top left, bottom right
             
             cv2.imshow('YOLO', frame_to_show)
             if cv2.waitKey(1) & 0xFF:
@@ -143,7 +148,7 @@ class System():
     def _crop_image(self, track, frame, show=False):
         frame_to_crop = frame.copy()
 
-        bb = track.to_ltrb()
+        bb = track.to_ltwh()
         x, y, w, h = map(int, bb)
         
         cropped_img = frame_to_crop[y:y+h, x:x+w]
@@ -152,13 +157,25 @@ class System():
         par_logger.debug(f"Cropped image shape: {cropped_img.shape if cropped_img is not None else None}")
 
         if show:
-            cv2.imshow("Cropped Image", cropped_img)
+            cv2.imshow(f"Cropped Image {track.track_id} ", cropped_img)
+            cv2.waitKey(1) & 0xFF
 
-        cropped_img = cv2.resize(cropped_img, (WIDTH_PAR, HEIGHT_PAR))
-        cropped_img = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB)
-        cropped_img = torch.transforms.ToTensor()(cropped_img)
-        cropped_img = torch.transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])(cropped_img)
-        cropped_img = cropped_img.to(self.device)
+        try:
+            cropped_img = cv2.resize(cropped_img, (WIDTH_PAR, HEIGHT_PAR))
+            cropped_img = cv2.cvtColor(cropped_img, cv2.COLOR_BGR2RGB)
+            cropped_img = transforms.ToTensor()(cropped_img)
+            cropped_img = transforms.Normalize(mean = [0.485, 0.456, 0.406], std = [0.229, 0.224, 0.225])(cropped_img)
+
+            # cropped_img = cropped_img.permute(1, 2, 0).numpy()  
+            # cropped_img = (cropped_img * 255).astype(np.uint8)
+            # cv2.imshow(f"Cropped Image {track.track_id} ", cropped_img)
+            # cv2.waitKey(1) & 0xFF
+            
+            cropped_img = cropped_img.to(self.device)
+        except Exception:
+            par_logger.error(f"Error in cropping image: {track.track_id}")
+            cropped_img = None
+        
         return cropped_img
     
 
@@ -190,8 +207,13 @@ class System():
         par_logger.debug(f"ID {track.track_id}: ROI2 - Time: {track._roi2_time}, Entrances: {track._roi2_transit}")
 
     def update_par(self, track : CustomTrack, frame):
-        self._crop_image(track, frame, show=SHOW_CROP)
-        pass
+        frame_par = frame.copy()
+        self.par_model.to(self.device)
+        cropped_img = self._crop_image(track, frame_par, show=SHOW_CROP)
+        
+        if cropped_img:
+            pass
+        
 
     def print_roi(self, frame):
         frame_to_show = frame.copy()

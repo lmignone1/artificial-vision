@@ -47,7 +47,7 @@ while True:
     frame = cv2.resize(frame, (WIDTH, HEIGHT))
     logger.debug('Frame shape: %s', str(frame.shape))
     
-    system.print_roi(frame)
+    # system.print_roi(frame)
     detections = system.predict(frame, show=SHOW_DETECTOR)
     tracks = system.update_tracks(detections, frame=frame, show=SHOW_TRACKER)
 
@@ -61,7 +61,7 @@ while True:
         if track.is_confirmed():
             tracker_logger.debug('track is confirmed %s', track.track_id)
             system.update_roi(track)
-
+            system.update_par(track, frame)
             # se io counter par < N allora classificazione altrimenti stop.Quindi procedo con il massimo . 
             # alle prossime iterazioni essendo confermata la classificazione non faremo piu calcoli per quel track
 

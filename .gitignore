@@ -4,3 +4,5 @@ __pycache__/
 
 validation*
 training*
+
+best_model.pth
