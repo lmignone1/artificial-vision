@@ -57,21 +57,23 @@ while True:
         if track.is_tentative():
             tracker_logger.debug('track is tentative %s', track.track_id)
             continue
+        
+        if not track.is_confirmed() or track.is_deleted(): 
+            continue
 
         if track.is_confirmed():
             tracker_logger.debug('track is confirmed %s', track.track_id)
+
+            if not system.is_observed(track):
+                system.add_track(track)
+
             system.update_roi(track)
             system.update_par(track, frame)
-            # se io counter par < N allora classificazione altrimenti stop.Quindi procedo con il massimo . 
-            # alle prossime iterazioni essendo confermata la classificazione non faremo piu calcoli per quel track
-
-        if not track.is_confirmed() or track.is_deleted(): 
-            continue
     
     time.sleep(SAMPLE_TIME)
 
-writer = FileJson(args.results)
-# writer.write_par(tracks_dict)
+system.write_par(args.results)
+
 video.release()
 cv2.destroyAllWindows()
 torch.cuda.empty_cache()

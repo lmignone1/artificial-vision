@@ -18,10 +18,6 @@ PERSON = {
     "roi2_persistence_time" : 0
 }
 
-PEOPLE = {
-    "people" : []
-}
-
 class FileJson():
 
     def __init__(self, path):
@@ -41,23 +37,23 @@ class FileJson():
         return roi1, roi2
     
     def write_par(self, par_dict : dict):
-        data = PEOPLE.copy()
+        data = {"people" : []}
         par_dict = dict(sorted(par_dict.items()))
 
         v : CustomTrack
         for _, v in par_dict.items():
             person = PERSON.copy()
             
-            person["id"] = v.track_id
-            person["gender"] = v._gender
-            person["bag"] = v._bag
-            person["hat"] = v._hat
-            person["upper_color"] = v._upper
-            person["lower_color"] = v._lower
-            person["roi1_passages"] = v._roi1_transit
-            person["roi1_persistence_time"] = v._roi1_time
-            person["roi2_passages"] = v._roi2_transit
-            person["roi2_persistence_time"] = v._roi2_time
+            person["id"] = int(v.track_id)
+            person["gender"] = v.gender
+            person["bag"] = v.bag
+            person["hat"] = v.hat
+            person["upper_color"] = v.upper
+            person["lower_color"] = v.lower
+            person["roi1_passages"] = v.roi1_transit
+            person["roi1_persistence_time"] = v.roi1_time
+            person["roi2_passages"] = v.roi2_transit
+            person["roi2_persistence_time"] = v.roi2_time
 
             data["people"].append(person)
         

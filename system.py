@@ -10,6 +10,7 @@ import torch
 import torchvision.transforms as transforms
 import numpy as np
 from json_module import *
+from torch.nn import functional as F
 
 detector_logger = logging.getLogger('yolo')
 detector_logger.setLevel(logging.INFO)
@@ -41,8 +42,10 @@ CLASSES = [0] # 0 = person
 class System():
 
     def __init__(self, path_roi):
-        self.detector = YOLO(os.path.join(os.path.dirname(__file__), 'models', MODEL))
-        self.classes = self.detector.names
+        path_to_dir = os.path.dirname(__file__)
+
+        self.detector = YOLO(os.path.join(path_to_dir, 'models', MODEL))
+        self.detector_classes = self.detector.names
         
         self.tracker = DeepSort(max_iou_distance=MAX_IOU_DISTANCE, max_age=MAX_AGE, n_init=N_INIT, max_cosine_distance=MAX_COSINE_DISTANCE, nn_budget=NN_BUDGET, override_track_class=CustomTrack)  
         # max_io_distance con 0.7 significa che 2 bb devono avere una distanza massima del 70 %. piu è alto e piu tollerante è il tracker
@@ -64,8 +67,10 @@ class System():
         self._roi2_x, self._roi2_y, self._roi2_w, self._roi2_h = roi2
 
         self.par_model = AttributeRecognitionModel(num_attributes=5)
-        self.par_model.load_state_dict(torch.load(os.path.join(os.path.dirname(__file__), 'par_models', 'best_model.pth')))
+        self.par_model.load_state_dict(torch.load(os.path.join(path_to_dir, 'par_models', 'best_model.pth')))
         self.par_model.eval()
+
+        self.tracks_collection = dict()
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         detector_logger.info('Using Device: %s', self.device)
@@ -143,9 +148,9 @@ class System():
         
 
     def _class_to_label(self, x):
-        return self.classes[int(x)]
+        return self.detector_classes[int(x)]
     
-    def _crop_image(self, track, frame, show=False):
+    def _crop_image(self, track : CustomTrack, frame, show=False):
         frame_to_crop = frame.copy()
 
         bb = track.to_ltwh()
@@ -171,11 +176,11 @@ class System():
             # cv2.imshow(f"Cropped Image {track.track_id} ", cropped_img)
             # cv2.waitKey(1) & 0xFF
             
-            cropped_img = cropped_img.to(self.device)
         except Exception:
             par_logger.error(f"Error in cropping image: {track.track_id}")
             cropped_img = None
         
+        par_logger.info(f"Crop image with id {track.track_id} done")
         return cropped_img
     
 
@@ -188,32 +193,48 @@ class System():
 
         # Verifica se il punto si trova all'interno di ROI1
         if self._roi1_x <= center_x <= (self._roi1_x + self._roi1_w) and self._roi1_y <= center_y <= (self._roi1_y + self._roi1_h):
-            if not track._roi1_inside:
-                track._roi1_transit += 1
-                track._roi1_inside = True
-            track._roi1_time += SAMPLE_TIME
+            if not track.roi1_inside:
+                track.roi1_transit += 1
+                track.roi1_inside = True
+            track.roi1_time += SAMPLE_TIME
         else:
-            track._roi1_inside = False
+            track.roi1_inside = False
         
         if self._roi2_x <= center_x <= self._roi2_x + self._roi2_w and self._roi2_y <= center_y <= self._roi2_y + self._roi2_h:
-            if not track._roi2_inside:
-                track._roi2_transit += 1
-                track._roi2_inside = True
-            track._roi2_time += SAMPLE_TIME
+            if not track.roi2_inside:
+                track.roi2_transit += 1
+                track.roi2_inside = True
+            track.roi2_time += SAMPLE_TIME
         else:
-            track._roi2_inside = False
+            track.roi2_inside = False
         
-        par_logger.debug(f"ID {track.track_id}: ROI1 - Time: {track._roi1_time}, Entrances: {track._roi1_transit}")
-        par_logger.debug(f"ID {track.track_id}: ROI2 - Time: {track._roi2_time}, Entrances: {track._roi2_transit}")
+        par_logger.debug(f"ID {track.track_id}: ROI1 - Time: {track.roi1_time}, Entrances: {track.roi1_transit}")
+        par_logger.debug(f"ID {track.track_id}: ROI2 - Time: {track.roi2_time}, Entrances: {track.roi2_transit}")
 
     def update_par(self, track : CustomTrack, frame):
         frame_par = frame.copy()
         self.par_model.to(self.device)
-        cropped_img = self._crop_image(track, frame_par, show=SHOW_CROP)
         
-        if cropped_img:
-            pass
-        
+        if not track._is_par_confirmed:
+            cropped_img = self._crop_image(track, frame_par, show=SHOW_CROP)
+            
+            if cropped_img is not None:
+                cropped_img = cropped_img.float()
+                cropped_img = cropped_img.unsqueeze(0).to(self.device)
+                o = self.par_model(cropped_img)
+
+                for task_index in range(len(o)):
+                    pred = o[task_index]
+
+                    if task_index < 2:  # multiclasse
+                        pred = F.softmax(pred, dim=1)
+            
+                    index_class = torch.argmax(pred, dim=1).item()
+                    
+                    track.add_par_measurement(task_index, index_class)
+                
+                track.check_limit_par_measurements()
+            
 
     def print_roi(self, frame):
         frame_to_show = frame.copy()
@@ -227,3 +248,13 @@ class System():
         
         if cv2.waitKey(1) & 0xFF:
             pass
+    
+    def write_par(self, path):
+        writer = FileJson(path)
+        writer.write_par(self.tracks_collection)
+    
+    def add_track(self, track : CustomTrack):
+        self.tracks_collection[track.track_id] = track
+    
+    def is_observed(self, track : CustomTrack):
+        return track.track_id in self.tracks_collection

@@ -1,0 +1,148 @@
+{
+    "people": [
+        {
+            "id": 1,
+            "gender": "male",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 1,
+            "roi1_persistence_time": 7.933333333333325,
+            "roi2_passages": 0,
+            "roi2_persistence_time": 0
+        },
+        {
+            "id": 10,
+            "gender": "male",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 2,
+            "roi1_persistence_time": 2.733333333333335,
+            "roi2_passages": 0,
+            "roi2_persistence_time": 0
+        },
+        {
+            "id": 11,
+            "gender": "male",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 0,
+            "roi1_persistence_time": 0,
+            "roi2_passages": 1,
+            "roi2_persistence_time": 0.3333333333333333
+        },
+        {
+            "id": 13,
+            "gender": "male",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 1,
+            "roi1_persistence_time": 3.6666666666666714,
+            "roi2_passages": 0,
+            "roi2_persistence_time": 0
+        },
+        {
+            "id": 2,
+            "gender": "male",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 0,
+            "roi1_persistence_time": 0,
+            "roi2_passages": 0,
+            "roi2_persistence_time": 0
+        },
+        {
+            "id": 21,
+            "gender": "female",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 1,
+            "roi1_persistence_time": 0.39999999999999997,
+            "roi2_passages": 0,
+            "roi2_persistence_time": 0
+        },
+        {
+            "id": 22,
+            "gender": "male",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 0,
+            "roi1_persistence_time": 0,
+            "roi2_passages": 0,
+            "roi2_persistence_time": 0
+        },
+        {
+            "id": 25,
+            "gender": null,
+            "bag": null,
+            "hat": null,
+            "upper_color": null,
+            "lower_color": null,
+            "roi1_passages": 0,
+            "roi1_persistence_time": 0,
+            "roi2_passages": 0,
+            "roi2_persistence_time": 0
+        },
+        {
+            "id": 3,
+            "gender": "male",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 1,
+            "roi1_persistence_time": 19.533333333333285,
+            "roi2_passages": 0,
+            "roi2_persistence_time": 0
+        },
+        {
+            "id": 5,
+            "gender": "male",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 1,
+            "roi1_persistence_time": 1.2,
+            "roi2_passages": 0,
+            "roi2_persistence_time": 0
+        },
+        {
+            "id": 6,
+            "gender": "female",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 1,
+            "roi1_persistence_time": 1.4666666666666666,
+            "roi2_passages": 0,
+            "roi2_persistence_time": 0
+        },
+        {
+            "id": 8,
+            "gender": "female",
+            "bag": false,
+            "hat": false,
+            "upper_color": "gray",
+            "lower_color": "black",
+            "roi1_passages": 0,
+            "roi1_persistence_time": 0,
+            "roi2_passages": 1,
+            "roi2_persistence_time": 0.5333333333333333
+        }
+    ]
+}

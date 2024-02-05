@@ -51,9 +51,9 @@ class AttentionModule(nn.Module):
 class ClassifierBlock(nn.Module):
 
   def __init__(self, layer, activation_function = None):
-     super(ClassifierBlock, self).__init__()
+    super(ClassifierBlock, self).__init__()
 
-     self.block = nn.Sequential(layer, activation_function) if activation_function else nn.Sequential(layer)
+    self.block = nn.Sequential(layer, activation_function) if activation_function else nn.Sequential(layer)
 
   def forward(self, x):
     return self.block(x)
