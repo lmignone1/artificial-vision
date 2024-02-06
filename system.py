@@ -208,8 +208,8 @@ class System():
         else:
             track.roi2_inside = False
         
-        par_logger.debug(f"ID {track.track_id}: ROI1 - Time: {track.roi1_time}, Entrances: {track.roi1_transit}")
-        par_logger.debug(f"ID {track.track_id}: ROI2 - Time: {track.roi2_time}, Entrances: {track.roi2_transit}")
+        par_logger.debug(f"ID {track.track_id}: ROI1 - Time: {round(track.roi1_time, 2)}, Passages: {track.roi1_transit}")
+        par_logger.debug(f"ID {track.track_id}: ROI2 - Time: {round(track.roi2_time, 2)}, Passages: {track.roi2_transit}")
 
     def update_par(self, track : CustomTrack, frame):
         frame_par = frame.copy()
@@ -244,8 +244,8 @@ class System():
         cv2.rectangle(frame_to_show, (self._roi1_x, self._roi1_y), (self._roi1_x + self._roi1_w, self._roi1_y + self._roi1_h), (0, 0, 0), 3)
         cv2.rectangle(frame_to_show, (self._roi2_x, self._roi2_y), (self._roi2_x + self._roi2_w, self._roi2_y + self._roi2_h), (0, 0, 0), 3)
         
-        cv2.putText(frame_to_show, "ROI1", (self._roi1_x + 5, self._roi1_y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
-        cv2.putText(frame_to_show, "ROI2", (self._roi2_x + 5, self._roi2_y - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
+        cv2.putText(frame_to_show, "1", (self._roi1_x + 5, self._roi1_y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
+        cv2.putText(frame_to_show, "2", (self._roi2_x + 5, self._roi2_y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
         
         cv2.imshow('ROI', frame_to_show)
         
@@ -264,7 +264,8 @@ class System():
         return int(track.track_id) in self.tracks_collection
     
     def print_scene(self, frame):
-        frame_to_show = self.print_roi(frame)
+        frame_to_show = frame.copy()
+        frame_to_show = self.print_roi(frame_to_show)
         in_roi1 = 0
         in_roi2 = 0
         outside_roi = 0
@@ -302,7 +303,7 @@ class System():
                 cv2.rectangle(frame_to_show, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
                 cv2.putText(frame_to_show, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
                 in_roi2 += 1
-                self.total_passage_roi2 += 1
+                
                 
 
             if track.roi1_inside == False and track.roi2_inside == False:
