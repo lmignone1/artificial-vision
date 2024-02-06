@@ -228,9 +228,12 @@ class System():
 
                     if task_index < 2:  # multiclasse
                         pred = F.softmax(pred, dim=1)
-            
-                    index_class = torch.argmax(pred, dim=1).item()
-                    
+                        index_class = torch.argmax(pred, dim=1).item()
+                    else:
+                        pred = pred.squeeze()
+                        pred = pred > 0.5
+                        index_class = int(pred.item())
+
                     track.add_par_measurement(task_index, index_class)
                 
                 track.check_limit_par_measurements()
@@ -254,7 +257,7 @@ class System():
         writer.write_par(self.tracks_collection)
     
     def add_track(self, track : CustomTrack):
-        self.tracks_collection[track.track_id] = track
+        self.tracks_collection[int(track.track_id)] = track
     
     def is_observed(self, track : CustomTrack):
-        return track.track_id in self.tracks_collection
+        return int(track.track_id) in self.tracks_collection
