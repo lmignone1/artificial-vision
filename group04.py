@@ -68,7 +68,8 @@ while True:
                 system.add_track(track)
 
             system.update_roi(track)
-            system.update_par(track, frame)
+            #system.update_par(track, frame)
+            system.print_scene(frame)
     
     time.sleep(SAMPLE_TIME)
 
