@@ -2,8 +2,8 @@ import json, os, sys
 import logging
 from tracks import CustomTrack
 
-json_logger = logging.getLogger('json')
-json_logger.setLevel(logging.INFO)
+# json_logger = logging.getLogger('json')
+# json_logger.setLevel(logging.INFO)
 
 PERSON = {
     "id": 0,
@@ -29,9 +29,9 @@ class FileJson():
                 file = json.load(f)
                 roi1 = file["roi1"]
                 roi2 = file["roi2"]
-                json_logger.info(f'File {os.path.basename(self._path)} loaded')
+                # json_logger.info(f'File {os.path.basename(self._path)} loaded')
         except:
-            json_logger.error(f'File {os.path.basename(self._path)} not found')
+            # json_logger.error(f'File {os.path.basename(self._path)} not found')
             sys.exit(1)
         
         return roi1, roi2
@@ -60,9 +60,9 @@ class FileJson():
         try:
             with open(self._path, 'w') as f:
                 json.dump(data, f, indent=4)
-                json_logger.info(f'File {os.path.basename(self._path)} written')
+                # json_logger.info(f'File {os.path.basename(self._path)} written')
         except:
-            json_logger.error(f'File {os.path.basename(self._path)} not written')
+            # json_logger.error(f'File {os.path.basename(self._path)} not written')
             sys.exit(1)
    
 

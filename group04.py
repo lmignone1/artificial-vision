@@ -3,15 +3,15 @@ import os, time
 from tracks import *
 import argparse as ap
 
-logger = logging.getLogger(__file__)
-logger.setLevel(logging.INFO)
+# logger = logging.getLogger(__file__)
+# logger.setLevel(logging.INFO)
 
-logging.basicConfig(level=logging.DEBUG) # livello globale
+# logging.basicConfig(level=logging.INFO)
 
 PATH = os.path.dirname(__file__)
 
-SHOW_DETECTOR = False
-SHOW_TRACKER = True
+SHOW_DETECTOR = True
+SHOW_TRACKER =False
 
 
 def get_args():
@@ -30,7 +30,7 @@ fps = video.get(cv2.CAP_PROP_FPS) # frames per second
 total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT) # total number of frames
 duration_seconds = total_frames / fps
 
-logger.info("Video duration: %s s", str(duration_seconds))
+# logger.info("Video duration: %s s", str(duration_seconds))
 
 sec = 0
 while True:
@@ -39,40 +39,40 @@ while True:
     sec += SAMPLE_TIME
     
     if sec > duration_seconds or not hasFrames:
-        logger.info('Video ended')
+        # logger.info('Video ended')
         break
 
     sec = round(sec, 2)
     
     frame = cv2.resize(frame, (WIDTH, HEIGHT))
-    logger.debug('Frame shape: %s', str(frame.shape))
+    # logger.debug('Frame shape: %s', str(frame.shape))
     
     # system.print_roi(frame)
-    detections = system.predict(frame, show=SHOW_DETECTOR)
+    detections = system.predict(frame, confidence=CONFIDENCE, show=SHOW_DETECTOR)
     tracks = system.update_tracks(detections, frame=frame, show=SHOW_TRACKER)
 
     track : CustomTrack
     for track in tracks:
         
         if track.is_tentative():
-            tracker_logger.debug('track is tentative %s', track.track_id)
+            # tracker_logger.debug('track is tentative %s', track.track_id)
             continue
         
         if not track.is_confirmed() or track.is_deleted(): 
             continue
 
         if track.is_confirmed():
-            tracker_logger.debug('track is confirmed %s', track.track_id)
+            # tracker_logger.debug('track is confirmed %s', track.track_id)
 
             if not system.is_observed(track):
                 system.add_track(track)
 
             system.update_roi(track)
-            system.update_par(track, frame)
+            # system.update_par(track, frame)
     
-    time.sleep(SAMPLE_TIME)
+    # time.sleep(SAMPLE_TIME)
 
-system.write_par(args.results)
+# system.write_par(args.results)
 
 video.release()
 cv2.destroyAllWindows()
