@@ -230,7 +230,7 @@ class System():
                         pred = F.softmax(pred, dim=1)
                         index_class = torch.argmax(pred, dim=1).item()
                     else:
-                        pred = pred.squeeze()
+                        pred = pred.squeeze(1)
                         pred = pred > 0.5
                         index_class = int(pred.item())
 
