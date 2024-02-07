@@ -253,6 +253,11 @@ class System():
             pass
     
     def write_par(self, path):
+        track : CustomTrack
+        for track in self.tracks_collection.item():
+            if not track.is_measurements_empty():
+                track.find_max()
+
         writer = FileJson(path)
         writer.write_par(self.tracks_collection)
     
