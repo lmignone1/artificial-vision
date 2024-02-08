@@ -21,7 +21,7 @@ from torch.nn import functional as F
 # par_logger = logging.getLogger('par')
 # par_logger.setLevel(logging.INFO)
 
-SAMPLE_TIME = 1/12  # 1/fps dove fps = #immagini/secondi
+SAMPLE_TIME = 1/10  # 1/fps dove fps = #immagini/secondi
 
 # TRACKER
 MAX_IOU_DISTANCE = 0.6
@@ -255,7 +255,7 @@ class System():
     
     def write_par(self, path):
         track : CustomTrack
-        for track in self.tracks_collection.item():
+        for _, track in self.tracks_collection.items():
             if not track.is_measurements_empty():
                 track.find_max()
 

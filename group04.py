@@ -11,7 +11,7 @@ import argparse as ap
 PATH = os.path.dirname(__file__)
 
 SHOW_DETECTOR = True
-SHOW_TRACKER =False
+SHOW_TRACKER = False
 
 
 def get_args():
@@ -63,16 +63,16 @@ while True:
 
         if track.is_confirmed():
             # tracker_logger.debug('track is confirmed %s', track.track_id)
-
+            
             if not system.is_observed(track):
                 system.add_track(track)
 
             system.update_roi(track)
-            # system.update_par(track, frame)
+            system.update_par(track, frame)
     
     # time.sleep(SAMPLE_TIME)
 
-# system.write_par(args.results)
+system.write_par(args.results)
 
 video.release()
 cv2.destroyAllWindows()

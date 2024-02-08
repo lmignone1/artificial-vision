@@ -58,7 +58,7 @@ class CustomTrack(Track):
         self._is_par_confirmed = True
     
     def is_measurements_empty(self):
-        return len(self._measurements) == 0
+        return self._measurements is None
 
 
 
