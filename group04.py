@@ -70,6 +70,7 @@ while True:
             system.update_roi(track)
             system.update_par(track, frame)
     
+    system.print_scene(frame)
     # time.sleep(SAMPLE_TIME)
 
 system.write_par(args.results)
