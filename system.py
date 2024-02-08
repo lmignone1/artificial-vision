@@ -247,10 +247,6 @@ class System():
         cv2.putText(frame_to_show, "1", (self._roi1_x + 5, self._roi1_y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
         cv2.putText(frame_to_show, "2", (self._roi2_x + 5, self._roi2_y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
         
-        cv2.imshow('ROI', frame_to_show)
-        
-        if cv2.waitKey(1) & 0xFF:
-            pass
         return frame_to_show
     
     def write_par(self, path):

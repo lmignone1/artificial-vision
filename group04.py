@@ -71,7 +71,7 @@ while True:
             #system.update_par(track, frame)
             
     system.print_scene(frame)
-    time.sleep(SAMPLE_TIME)
+    # time.sleep(SAMPLE_TIME)
 
 system.write_par(args.results)
 
