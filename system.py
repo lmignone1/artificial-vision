@@ -24,11 +24,11 @@ from torch.nn import functional as F
 SAMPLE_TIME = 1/10  # 1/fps dove fps = #immagini/secondi
 
 # TRACKER
-MAX_IOU_DISTANCE = 0.6
-MAX_AGE = 75 # 75/15 = 5 secondi
-N_INIT = 15 # 15/15 = 1 secondo
-MAX_COSINE_DISTANCE = 0.25
-NN_BUDGET = 8
+MAX_IOU_DISTANCE = 0.7
+MAX_AGE = 100 # 10 secondi
+N_INIT = 10 # 1 secondo
+MAX_COSINE_DISTANCE = 0.3
+NN_BUDGET = 5
 
 # DETECTOR
 #https://docs.ultralytics.com/modes/predict/#inference-arguments
@@ -49,7 +49,8 @@ class System():
         self.detector_classes = self.detector.names
         
         self.tracker = DeepSort(max_iou_distance=MAX_IOU_DISTANCE, max_age=MAX_AGE, n_init=N_INIT, max_cosine_distance=MAX_COSINE_DISTANCE, nn_budget=NN_BUDGET, override_track_class=CustomTrack)  
-        # max_io_distance con 0.7 significa che 2 bb devono avere una distanza massima del 70 %. piu è alto e piu tollerante è il tracker
+        # https://arxiv.org/pdf/1703.07402.pdf
+        # max_iou_distance con 0.7 significa che 2 bb devono avere una distanza massima del 70 %. piu è alto e piu tollerante è il tracker
         # max_age = 30 è il numero di frame in cui un oggetto non viene rilevato prima di essere eliminato. Essendo fps = 10, allora abbiamo 3 secondi prima di rimuovere l oggettoà
         # n_init = 10  è il numero di frame in cui un oggetto deve essere rilevato prima di essere considerato un oggetto vero e proprio. Impiega 1 secondo
         # max_cosine_distance = 0.15 è la distanza massima tra 2 feature per essere considerate uguali. Più è alto e piu tollerante è il tracker
@@ -68,7 +69,7 @@ class System():
         self._roi2_x, self._roi2_y, self._roi2_w, self._roi2_h = roi2
 
         self.par_model = AttributeRecognitionModel(num_attributes=5)
-        #self.par_model.load_state_dict(torch.load(os.path.join(path_to_dir, 'par_models', 'best_model.pth')))
+        self.par_model.load_state_dict(torch.load(os.path.join(path_to_dir, 'par_models', 'best_model.pth')))
         self.par_model.eval()
 
         self.tracks_collection = dict()
@@ -162,9 +163,9 @@ class System():
         # par_logger.debug(f"Bounding box coordinates: x={x}, y={y}, w={w}, h={h}")
         # par_logger.debug(f"Cropped image shape: {cropped_img.shape if cropped_img is not None else None}")
 
-        if show:
-            cv2.imshow(f"Cropped Image {track.track_id} ", cropped_img)
-            cv2.waitKey(1) & 0xFF
+        # if show:
+        #     cv2.imshow(f"Cropped Image {track.track_id} ", cropped_img)
+        #     cv2.waitKey(1) & 0xFF
 
         try:
             cropped_img = cv2.resize(cropped_img, (WIDTH_PAR, HEIGHT_PAR))
@@ -320,7 +321,7 @@ class System():
                 # Disegna il rettangolo bianco
                 cv2.rectangle(frame_to_show, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
                 cv2.putText(frame_to_show, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-                if not (x_min >= WIDTH or x_max <= 0 or y_min >= HEIGHT or y_max <= 0): #se persona esce dalla scena non viene contata, questo perché se persona esce dalla scena non perde subito il tracking (non si sa il motivo)                    
+                if not (x_min >= WIDTH or x_max <= 0 or y_min >= HEIGHT or y_max <= 0): #se persona esce dalla scena non viene contata, questo perché se persona esce dalla scena non perde subito il tracking                
                     outside_roi += 1
         
             # alcola i passaggi totali nelle roi
@@ -360,5 +361,4 @@ class System():
  
 
         cv2.imshow('PAR', frame_to_show)
-        if cv2.waitKey(1) & 0xFF:
-            pass
+        cv2.waitKey(1) & 0xFF

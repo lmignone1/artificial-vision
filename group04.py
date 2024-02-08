@@ -11,7 +11,7 @@ import argparse as ap
 PATH = os.path.dirname(__file__)
 
 SHOW_DETECTOR = True
-SHOW_TRACKER = False
+SHOW_TRACKER = True
 
 
 def get_args():
@@ -47,7 +47,7 @@ while True:
     frame = cv2.resize(frame, (WIDTH, HEIGHT))
     # logger.debug('Frame shape: %s', str(frame.shape))
     
-    # system.print_roi(frame)
+ 
     detections = system.predict(frame, confidence=CONFIDENCE, show=SHOW_DETECTOR)
     tracks = system.update_tracks(detections, frame=frame, show=SHOW_TRACKER)
 
