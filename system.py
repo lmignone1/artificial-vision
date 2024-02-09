@@ -12,6 +12,7 @@ import numpy as np
 from json_module import *
 from torch.nn import functional as F
 
+
 # detector_logger = logging.getLogger('yolo')
 # detector_logger.setLevel(logging.INFO)
 
@@ -20,21 +21,21 @@ from torch.nn import functional as F
 
 # par_logger = logging.getLogger('par')
 # par_logger.setLevel(logging.INFO)
-
-SAMPLE_TIME = 1/10  # 1/fps dove fps = #immagini/secondi
+FPS = 5 
+SAMPLE_TIME = 1/FPS  # 1/fps dove fps = #immagini/secondi
 
 # TRACKER
-MAX_IOU_DISTANCE = 0.7
-MAX_AGE = 50 # 10 secondi
-N_INIT = 3 # 1 secondo
-MAX_COSINE_DISTANCE = 0.3
-NN_BUDGET = 5
+MAX_IOU_DISTANCE = 0.8  #sotto la soglia -> stesso oggetto
+MAX_AGE = 30 # 10 secondi
+N_INIT = 7 # 0.5 secondo
+MAX_COSINE_DISTANCE = 0.4
+NN_BUDGET = None
 
 # DETECTOR
 #https://docs.ultralytics.com/modes/predict/#inference-arguments
 # inserendo HEIGHT e WIDTH pari a 640 e 480 abbiamo prestazioni peggiori del detector rispetto a quando sono 576 e 352
 MODEL = 'yolov8n.pt'
-HEIGHT = 640 # se metto 640 abbiamo uguali performance 
+HEIGHT = 384 # se metto 640 abbiamo uguali performance 
 WIDTH = 640
 TARGET = 'person'
 CLASSES = [0] # 0 = person
@@ -47,8 +48,8 @@ class System():
 
         self.detector = YOLO(os.path.join(path_to_dir, 'models', MODEL))
         self.detector_classes = self.detector.names
-        
-        self.tracker = DeepSort(max_iou_distance=MAX_IOU_DISTANCE, max_age=MAX_AGE, n_init=N_INIT, max_cosine_distance=MAX_COSINE_DISTANCE, nn_budget=NN_BUDGET, override_track_class=CustomTrack)  
+        embedder_path = os.path.join(path_to_dir, 'models', 'osnet_x1_0.pth')
+        self.tracker = DeepSort(embedder=EMBEDDER_CHOICES[1], embedder_model_name='osnet_x1_0', embedder_wts=embedder_path, max_iou_distance=MAX_IOU_DISTANCE, max_age=MAX_AGE, n_init=N_INIT, max_cosine_distance=MAX_COSINE_DISTANCE, nn_budget=NN_BUDGET, override_track_class=CustomTrack)  
         # https://arxiv.org/pdf/1703.07402.pdf
         # max_iou_distance con 0.7 significa che 2 bb devono avere una distanza massima del 70 %. piu è alto e piu tollerante è il tracker
         # max_age = 30 è il numero di frame in cui un oggetto non viene rilevato prima di essere eliminato. Essendo fps = 10, allora abbiamo 3 secondi prima di rimuovere l oggettoà
@@ -65,12 +66,13 @@ class System():
         roi1 = (int(WIDTH * roi1['x']), int(HEIGHT * roi1['y']), int(WIDTH * roi1['width']), int(HEIGHT * roi1['height'])) 
         roi2 = (int(WIDTH * roi2['x']), int(HEIGHT * roi2['y']), int(WIDTH * roi2['width']), int(HEIGHT * roi2['height']))
 
+        
         self._roi1_x, self._roi1_y, self._roi1_w, self._roi1_h = roi1
         self._roi2_x, self._roi2_y, self._roi2_w, self._roi2_h = roi2
 
         self.par_model = AttributeRecognitionModel(num_attributes=5)
         self.par_model.load_state_dict(torch.load(os.path.join(path_to_dir, 'par_models', 'best_model.pth')))
-        #self.par_model.load_state_dict(torch.load(os.path.join(path_to_dir, 'par_models', 'Carlo_model.pth'),map_location=torch.device('cpu')))
+       
         self.par_model.eval()
 
         self.tracks_collection = dict()
@@ -242,15 +244,30 @@ class System():
                 track.check_limit_par_measurements()
             
 
-    def _print_roi(self, frame):
+    def _print_roi(self, frame, width, height):
+
         frame_to_show = frame.copy()
-        cv2.rectangle(frame_to_show, (self._roi1_x, self._roi1_y), (self._roi1_x + self._roi1_w, self._roi1_y + self._roi1_h), (0, 0, 0), 3)
-        cv2.rectangle(frame_to_show, (self._roi2_x, self._roi2_y), (self._roi2_x + self._roi2_w, self._roi2_y + self._roi2_h), (0, 0, 0), 3)
+
+        roi1_x = self._transform(self._roi1_x, WIDTH, width)
+        roi1_y = self._transform(self._roi1_y, HEIGHT, height)
+        roi1_w = self._transform(self._roi1_w, WIDTH, width)
+        roi1_h = self._transform(self._roi1_h, HEIGHT, height)
+
+        roi2_x = self._transform(self._roi2_x, WIDTH, width)
+        roi2_y = self._transform(self._roi2_y, HEIGHT, height)
+        roi2_w = self._transform(self._roi2_w, WIDTH, width)
+        roi2_h = self._transform(self._roi2_h, HEIGHT, height)
+
+        cv2.rectangle(frame_to_show, (roi1_x, roi1_y), (roi1_x + roi1_w, roi1_y + roi1_h), (0, 0, 0), 3)
+        cv2.rectangle(frame_to_show, (roi2_x, roi2_y), (roi2_x + roi2_w, roi2_y + roi2_h), (0, 0, 0), 3)
         
-        cv2.putText(frame_to_show, "1", (self._roi1_x + 5, self._roi1_y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
-        cv2.putText(frame_to_show, "2", (self._roi2_x + 5, self._roi2_y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
+        cv2.putText(frame_to_show, "1", (roi1_x + 5, roi1_y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
+        cv2.putText(frame_to_show, "2", (roi2_x + 5, roi2_y + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
         
         return frame_to_show
+    
+    def _transform(self, coord, resolution_net, resolution2):
+        return int((coord / resolution_net) * resolution2)
     
     def write_par(self, path):
         track : CustomTrack
@@ -268,62 +285,82 @@ class System():
         return int(track.track_id) in self.tracks_collection
     
     def print_scene(self, frame):
-        frame_to_show = frame.copy()
-        frame_to_show = self._print_roi(frame_to_show)
+        frame = cv2.resize(frame, (1280, 720))
+        width = frame.shape[1]
+        height = frame.shape[0]
+        frame = self._print_roi(frame, width, height)
+
         in_roi1 = 0
         in_roi2 = 0
         outside_roi = 0
         passages_roi1 = 0
         passages_roi2 = 0
 
-        for id, track in self.tracks_collection.items():
+        for _, track in self.tracks_collection.items():
 
-            if track.roi1_inside:
+            bb = track.to_ltrb()
+
+            x_min, y_min, x_max, y_max = map(int, bb) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
+
+            x_min = self._transform(x_min, WIDTH, width)
+            y_min = self._transform(y_min, HEIGHT, height)
+            x_max = self._transform(x_max, WIDTH, width)
+            y_max = self._transform(y_max, HEIGHT, height)
+
+            if not track.is_deleted():
+
+                if track.roi1_inside:
+                    
+                    # bb = track.to_ltrb()
+
+                    # x_min, y_min, x_max, y_max = map(int, bb) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
+
+                    # x_min = self._transform(x_min, WIDTH, width)
+                    # y_min = self._transform(y_min, HEIGHT, height)
+                    # x_max = self._transform(x_max, WIDTH, width)
+                    # y_max = self._transform(y_max, HEIGHT, height)
+
+                    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)
+                    # Calcola le dimensioni per il rettangolo bianco
+                    text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+
+                    # Disegna il rettangolo bianco
+                    cv2.rectangle(frame, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
+                    cv2.putText(frame, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+                    in_roi1 += 1
+                    
+                    
                 
-                bb = track.to_ltrb()
-                x_min, y_min, x_max, y_max = int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3]) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
+                elif track.roi2_inside:
 
-                cv2.rectangle(frame_to_show, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)
-                # Calcola le dimensioni per il rettangolo bianco
-                text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+                    # bb = track.to_ltrb()
+                    # x_min, y_min, x_max, y_max = int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3]) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
 
-                # Disegna il rettangolo bianco
-                cv2.rectangle(frame_to_show, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
-                cv2.putText(frame_to_show, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
-                in_roi1 += 1
-                
-                
-            
-            elif track.roi2_inside:
+                    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+                    # Calcola le dimensioni per il rettangolo bianco
+                    text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
 
-                bb = track.to_ltrb()
-                x_min, y_min, x_max, y_max = int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3]) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
+                    # Disegna il rettangolo bianco
+                    cv2.rectangle(frame, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
+                    cv2.putText(frame, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+                    in_roi2 += 1
+                    
+                    
 
-                cv2.rectangle(frame_to_show, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-                # Calcola le dimensioni per il rettangolo bianco
-                text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
+                if track.roi1_inside == False and track.roi2_inside == False:
 
-                # Disegna il rettangolo bianco
-                cv2.rectangle(frame_to_show, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
-                cv2.putText(frame_to_show, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
-                in_roi2 += 1
-                
-                
+                    # bb = track.to_ltrb()
+                    # x_min, y_min, x_max, y_max = int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3]) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
 
-            if track.roi1_inside == False and track.roi2_inside == False:
+                    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
+                    # Calcola le dimensioni per il rettangolo bianco
+                    text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
 
-                bb = track.to_ltrb()
-                x_min, y_min, x_max, y_max = int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3]) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
-
-                cv2.rectangle(frame_to_show, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
-                # Calcola le dimensioni per il rettangolo bianco
-                text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
-
-                # Disegna il rettangolo bianco
-                cv2.rectangle(frame_to_show, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
-                cv2.putText(frame_to_show, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-                if not (x_min >= WIDTH or x_max <= 0 or y_min >= HEIGHT or y_max <= 0): #se persona esce dalla scena non viene contata, questo perché se persona esce dalla scena non perde subito il tracking                
-                    outside_roi += 1
+                    # Disegna il rettangolo bianco
+                    cv2.rectangle(frame, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
+                    cv2.putText(frame, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+                    if not (x_min >= 1280 or x_max <= 0 or y_min >= 720 or y_max <= 0): #se persona esce dalla scena non viene contata, questo perché se persona esce dalla scena non perde subito il tracking                
+                        outside_roi += 1
         
             # alcola i passaggi totali nelle roi
             passages_roi1 += track.roi1_transit
@@ -336,30 +373,30 @@ class System():
             text_line4 = f"Passages in ROI 2: {passages_roi2}"
 
             # Disegna il rettangolo bianco con testo nero
-            cv2.rectangle(frame_to_show, (0, 0), (200, 80), (255, 255, 255), -1)
+            cv2.rectangle(frame, (0, 0), (200, 80), (255, 255, 255), -1)
 
             # Disegna le tre righe di testo
-            cv2.putText(frame_to_show, text_line1, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-            cv2.putText(frame_to_show, text_line2, (5, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-            cv2.putText(frame_to_show, text_line3, (5, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-            cv2.putText(frame_to_show, text_line4, (5, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            cv2.putText(frame, text_line1, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            cv2.putText(frame, text_line2, (5, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            cv2.putText(frame, text_line3, (5, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+            cv2.putText(frame, text_line4, (5, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
 
 
             
 
             # Stampa info persone
-            cv2.rectangle(frame_to_show, (x_min - 30, y_max), (x_max + 30, y_max + 40), (255, 255, 255), -1)
-            cv2.putText(frame_to_show, f"Gender: {track.gender}", (x_min - 25, y_max + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
+            cv2.rectangle(frame, (x_min - 30, y_max), (x_max + 30, y_max + 40), (255, 255, 255), -1)
+            cv2.putText(frame, f"Gender: {track.gender}", (x_min - 25, y_max + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
             if track.bag == True and track.hat == False:
-                cv2.putText(frame_to_show, "Bag", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
+                cv2.putText(frame, "Bag", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
             elif track.bag == False and track.hat == True:
-                cv2.putText(frame_to_show, "Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
+                cv2.putText(frame, "Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
             elif track.bag == True and track.hat == True:
-                cv2.putText(frame_to_show, "Bag Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
+                cv2.putText(frame, "Bag Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
             else:
-                 cv2.putText(frame_to_show, "No Bag No Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)   
-            cv2.putText(frame_to_show, f"U-L: {track.upper} - {track.lower}", (x_min - 25, y_max + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
+                 cv2.putText(frame, "No Bag No Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)   
+            cv2.putText(frame, f"U-L: {track.upper} - {track.lower}", (x_min - 25, y_max + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
  
 
-        cv2.imshow('PAR', frame_to_show)
+        cv2.imshow('PAR', frame)
         cv2.waitKey(1) & 0xFF

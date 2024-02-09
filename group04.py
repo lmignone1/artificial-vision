@@ -3,10 +3,11 @@ import os, time
 from tracks import *
 import argparse as ap
 
+
 # logger = logging.getLogger(__file__)
 # logger.setLevel(logging.INFO)
 
-# logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.DEBUG)
 
 PATH = os.path.dirname(__file__)
 
@@ -35,7 +36,7 @@ duration_seconds = total_frames / fps
 sec = 0
 while True:
     video.set(cv2.CAP_PROP_POS_MSEC,sec*1000)
-    hasFrames, frame = video.read()
+    hasFrames, frame_for_net = video.read()
     sec += SAMPLE_TIME
     
     if sec > duration_seconds or not hasFrames:
@@ -44,12 +45,13 @@ while True:
 
     sec = round(sec, 2)
     
-    frame = cv2.resize(frame, (WIDTH, HEIGHT))
+    frame = frame_for_net.copy()
+    frame_for_net = cv2.resize(frame_for_net, (WIDTH, HEIGHT))
     # logger.debug('Frame shape: %s', str(frame.shape))
     
  
-    detections = system.predict(frame, confidence=CONFIDENCE, show=SHOW_DETECTOR)
-    tracks = system.update_tracks(detections, frame=frame, show=SHOW_TRACKER)
+    detections = system.predict(frame_for_net, confidence=CONFIDENCE, show=SHOW_DETECTOR)
+    tracks = system.update_tracks(detections, frame=frame_for_net, show=SHOW_TRACKER)
 
     track : CustomTrack
     for track in tracks:
@@ -68,7 +70,7 @@ while True:
                 system.add_track(track)
 
             system.update_roi(track)
-            system.update_par(track, frame)
+            system.update_par(track, frame_for_net)
     
     system.print_scene(frame)
     # time.sleep(SAMPLE_TIME)
