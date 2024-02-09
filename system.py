@@ -25,8 +25,8 @@ SAMPLE_TIME = 1/10  # 1/fps dove fps = #immagini/secondi
 
 # TRACKER
 MAX_IOU_DISTANCE = 0.7
-MAX_AGE = 100 # 10 secondi
-N_INIT = 10 # 1 secondo
+MAX_AGE = 50 # 10 secondi
+N_INIT = 3 # 1 secondo
 MAX_COSINE_DISTANCE = 0.3
 NN_BUDGET = 5
 
@@ -70,6 +70,7 @@ class System():
 
         self.par_model = AttributeRecognitionModel(num_attributes=5)
         self.par_model.load_state_dict(torch.load(os.path.join(path_to_dir, 'par_models', 'best_model.pth')))
+        #self.par_model.load_state_dict(torch.load(os.path.join(path_to_dir, 'par_models', 'Carlo_model.pth'),map_location=torch.device('cpu')))
         self.par_model.eval()
 
         self.tracks_collection = dict()
