@@ -21,6 +21,10 @@ class ResNet50Backbone(nn.Module):
     def freeze_all(self):
         for param in self.model.parameters():
             param.requires_grad = False
+    
+    def unfreeze_last_layers(self, num_layers):
+        for param in list(self.model.parameters())[-num_layers:]:
+            param.requires_grad = True
 
 class AttentionModule(nn.Module):
     #https://github.com/luuuyi/CBAM.PyTorch
@@ -118,3 +122,6 @@ class AttributeRecognitionModel(nn.Module):
 
         for param in self.classifiers.parameters():
             param.requires_grad = True
+    
+    def unfreeze_last_layer_backbone(self, num_layers):
+        self.backbone.unfreeze_last_layers(num_layers)
