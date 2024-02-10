@@ -363,19 +363,8 @@ class System():
             cv2.rectangle(frame, (x_min - 30, y_max), (x_max + 30, y_max + 40), (255, 255, 255), -1)
             cv2.putText(frame, f"Gender: {GENDER[track.gender]}", (x_min - 25, y_max + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
             s = f"{BAG[track.bag]} {HAT[track.hat]}"
-            cv2.putText(frame, s, (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
-            
-            # if track.bag == True and track.hat == False:
-            #     cv2.putText(frame, "Bag", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
-            # elif track.bag == False and track.hat == True:
-            #     cv2.putText(frame, "Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
-            # elif track.bag == True and track.hat == True:
-            #     cv2.putText(frame, "Bag Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
-            # else:
-            #      cv2.putText(frame, "No Bag No Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)   
-            
+            cv2.putText(frame, s, (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)  
             cv2.putText(frame, f"U-L: {track.upper} - {track.lower}", (x_min - 25, y_max + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
  
-
         cv2.imshow('PEDESTRIAN ATTRIBUTES RECOGNITION', frame)
         cv2.waitKey(1) & 0xFF
