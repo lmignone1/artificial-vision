@@ -195,7 +195,7 @@ class System():
         center_x = (x_min + x_max) // 2
         center_y = (y_min + y_max) // 2
 
-        # Verifica se il punto si trova all'interno di ROI1
+        # Verifica se il centro è in ROI1
         if self._roi1_x <= center_x <= (self._roi1_x + self._roi1_w) and self._roi1_y <= center_y <= (self._roi1_y + self._roi1_h):
             if not track.roi1_inside:
                 track.roi1_transit += 1
@@ -299,7 +299,7 @@ class System():
 
             bb = track.to_ltrb()
 
-            x_min, y_min, x_max, y_max = map(int, bb) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
+            x_min, y_min, x_max, y_max = map(int, bb) # sono top left e bottom right.
 
             x_min = self._transform(x_min, WIDTH, width)
             y_min = self._transform(y_min, HEIGHT, height)
@@ -310,48 +310,30 @@ class System():
 
             if track.roi1_inside:
                 
-                # bb = track.to_ltrb()
-
-                # x_min, y_min, x_max, y_max = map(int, bb) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
-
-                # x_min = self._transform(x_min, WIDTH, width)
-                # y_min = self._transform(y_min, HEIGHT, height)
-                # x_max = self._transform(x_max, WIDTH, width)
-                # y_max = self._transform(y_max, HEIGHT, height)
-
+                # bb blu
                 cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (255, 0, 0), 2)
-                # Calcola le dimensioni per il rettangolo bianco
+                # rettangolo bianco
                 text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
-
-                # Disegna il rettangolo bianco
                 cv2.rectangle(frame, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
                 cv2.putText(frame, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
                 in_roi1 += 1
                 
-            
             elif track.roi2_inside:
-
-                # bb = track.to_ltrb()
-                # x_min, y_min, x_max, y_max = int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3]) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
-
+                
+                # bb verde
                 cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-                # Calcola le dimensioni per il rettangolo bianco
                 text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
-
-                # Disegna il rettangolo bianco
                 cv2.rectangle(frame, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
                 cv2.putText(frame, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
                 in_roi2 += 1
                 
-           
             elif (x_min < WIDTH_SHOW and x_max > 0 and y_min < HEIGHT_SHOW and y_max > 0) and not track.is_deleted():                               
                 
                 outside_roi += 1
+                
+                #bb rosso
                 cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
-                # Calcola le dimensioni per il rettangolo bianco
                 text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
-
-                # Disegna il rettangolo bianco
                 cv2.rectangle(frame, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
                 cv2.putText(frame, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
             
@@ -359,21 +341,17 @@ class System():
                 
                 print_flag = True
                
-        
-            # alcola i passaggi totali nelle roi
+            # passaggi totali roi
             passages_roi1 += track.roi1_transit
             passages_roi2 += track.roi2_transit
 
-            # Calcola le dimensioni del testo per ogni riga
             text_line1 = f"People in ROI: {in_roi1 + in_roi2}"
             text_line2 = f"Total Person: {in_roi1 + in_roi2 + outside_roi}"
             text_line3 = f"Passages in ROI 1: {passages_roi1}"
             text_line4 = f"Passages in ROI 2: {passages_roi2}"
 
-            # Disegna il rettangolo bianco con testo nero
+            # rettangolo bianco
             cv2.rectangle(frame, (0, 0), (200, 80), (255, 255, 255), -1)
-
-            # Disegna le tre righe di testo
             cv2.putText(frame, text_line1, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
             cv2.putText(frame, text_line2, (5, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
             cv2.putText(frame, text_line3, (5, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
@@ -384,7 +362,6 @@ class System():
             # Stampa info persone
             cv2.rectangle(frame, (x_min - 30, y_max), (x_max + 30, y_max + 40), (255, 255, 255), -1)
             cv2.putText(frame, f"Gender: {GENDER[track.gender]}", (x_min - 25, y_max + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
-            
             s = f"{BAG[track.bag]} {HAT[track.hat]}"
             cv2.putText(frame, s, (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
             

@@ -27,8 +27,8 @@ args = get_args()
 system = System(args.configuration)
 
 video = cv2.VideoCapture(os.path.join(PATH, args.video))
-fps = video.get(cv2.CAP_PROP_FPS) # frames per second
-total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT) # total number of frames
+fps = video.get(cv2.CAP_PROP_FPS)
+total_frames = video.get(cv2.CAP_PROP_FRAME_COUNT) 
 duration_seconds = total_frames / fps
 
 # logger.info("Video duration: %s s", str(duration_seconds))
@@ -47,9 +47,7 @@ while True:
     
     frame = frame_for_net.copy()
     frame_for_net = cv2.resize(frame_for_net, (WIDTH, HEIGHT))
-    # logger.debug('Frame shape: %s', str(frame.shape))
-    
- 
+
     detections = system.predict(frame_for_net, confidence=CONFIDENCE, show=SHOW_DETECTOR)
     tracks = system.update_tracks(detections, frame=frame_for_net, show=SHOW_TRACKER)
 
@@ -73,7 +71,6 @@ while True:
             system.update_par(track, frame_for_net)
     
     system.print_scene(frame)
-    # time.sleep(SAMPLE_TIME)
 
 system.write_par(args.results)
 

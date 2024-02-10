@@ -10,9 +10,9 @@ HEIGHT_PAR = 224
 class ResNet50Backbone(nn.Module):
 
     def __init__(self):
-        super(ResNet50Backbone, self).__init__() # Chiama il costruttore della classe madre nn.Module per inizializzare la classe base.
+        super(ResNet50Backbone, self).__init__()
 
-        self.model = resnet50(pretrained=True) # Carica il modello preaddestrato ResNet-50 dal torchvision.models con i pesi preaddestrati su ImageNet.
+        self.model = resnet50(pretrained=True)
         self.model = torch.nn.Sequential(*list(self.model.children())[:-1])
 
     def forward(self, x):
@@ -45,23 +45,17 @@ class AttentionModule(nn.Module):
         )
 
     def forward(self, x):
-        # print('ingresso')
         avg_out = torch.mean(x, dim=1, keepdim=True)
         max_out, _ = torch.max(x, dim=1, keepdim=True)
         x_spatial = torch.cat([avg_out, max_out], dim=1)
-        # print('x_spatial prima operazione', x_spatial.shape)
         x_spatial = self.spatial_attention(x_spatial)
-        # print('x_spatial dopo operazione', x_spatial.shape)
 
         avg_out = self.channel_attention(self.avg_pool(x))
         max_out = self.channel_attention(self.max_pool(x))
         x_channel = avg_out + max_out
-        # print('x_channel prima operazione', x_channel.shape)
         x_channel = self.sigmoid(x_channel)
-        # print('x_channel dopo operazione', x_channel.shape)
         
         out = x * x_channel * x_spatial
-        # print('uscita', out.shape)
         return out
 
 class BinaryClassifier(nn.Module):
@@ -97,38 +91,22 @@ class AttributeRecognitionModel(nn.Module):
     def __init__(self, num_attributes):
         super(AttributeRecognitionModel, self).__init__()
 
-        # Backbone ResNet-50
         self.backbone = ResNet50Backbone()
-
-        # Moduli di attenzione spaziale e di canale per ogni attributo
-        self.attention_modules = nn.ModuleList([AttentionModule(in_channels=2048) for _ in range(num_attributes)]) # Crea una lista di moduli di attenzione spaziale e di canale per ogni attributo.
-        # nn.ModuleList viene utilizzato per contenere i moduli in modo che PyTorch li tracci correttamente come parte del modello.
-       
-        # Classificatori per ogni attributo
-        # binary_classifier = [ClassifierBlock(nn.Linear(2048, 2), nn.Sigmoid()) for _ in range(3)]
+        self.attention_modules = nn.ModuleList([AttentionModule(in_channels=2048) for _ in range(num_attributes)])
         binary_classifier = [BinaryClassifier() for _ in range(3)]
-      
-        # multi_classifier = [ClassifierBlock(nn.Linear(2048, 11)) for _ in range(2)]
         multi_classifier = [MultiClassifier() for _ in range(2)]
-     
-        self.classifiers = nn.ModuleList(multi_classifier + binary_classifier) # Crea una lista di classificatori lineari per ogni attributo.
+        self.classifiers = nn.ModuleList(multi_classifier + binary_classifier)
 
     def forward(self, x):
-        # Passa l'input attraverso il backbone
         features = self.backbone(x)
-        # print("dimensione di features: ", features.size())
         pred_list=[]
         attention_outputs = [attention(features) for attention in self.attention_modules]
-        # print("Dimensione attention_outputs:", attention_outputs[0].size())
+        
         for att_output, classifier in zip(attention_outputs, self.classifiers):
-            # print("Dimensione att_output:", att_output.size())
             flattened_output = att_output.view(att_output.size(0), -1)
-            # print("Dimensione flattened_output:", flattened_output.size())
             pred = classifier(flattened_output)
-            # print("Dimensione logits:", pred.size())
             pred_list.append(pred)
-        # print("Dimensione logits totale:", len(pred_list))
-        # print('--- pred_list ', pred_list)
+
         return pred_list
 
     def freeze_backbone_parameters(self):
