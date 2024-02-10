@@ -28,7 +28,8 @@ class CustomTrack(Track):
         self._measurements = dict()
         self._number_measurements = 0
         self._is_par_confirmed = False
-        self._N = 15
+        self._N = 25
+        self._first_measure = 5
     
     def add_par_measurement(self, task, pred):
         try:
@@ -41,13 +42,16 @@ class CustomTrack(Track):
         
         if self._number_measurements >= self._N:
             self.find_max()
+            self._is_par_confirmed = True
+            self._measurements = self._number_measurements = None
+        
+        elif self._number_measurements == self._first_measure:
+            self.find_max()
             
     def find_max(self):
         pred_dict = dict()
         for k, v in self._measurements.items():
             pred_dict[k] = max(set(v), key = v.count)
-        
-        self._measurements = self._number_measurements = None
 
         self.upper = COLORS[pred_dict[0]]
         self.lower = COLORS[pred_dict[1]]
@@ -55,7 +59,6 @@ class CustomTrack(Track):
         self.bag = BAG[pred_dict[3]]
         self.hat = HAT[pred_dict[4]]
 
-        self._is_par_confirmed = True
     
     def is_measurements_empty(self):
         return self._measurements is None

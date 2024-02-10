@@ -51,9 +51,9 @@ class FileJson():
             person["upper_color"] = v.upper
             person["lower_color"] = v.lower
             person["roi1_passages"] = v.roi1_transit
-            person["roi1_persistence_time"] = v.roi1_time
+            person["roi1_persistence_time"] = round(v.roi1_time, 3)
             person["roi2_passages"] = v.roi2_transit
-            person["roi2_persistence_time"] = v.roi2_time
+            person["roi2_persistence_time"] = round(v.roi2_time, 3)
 
             data["people"].append(person)
         
