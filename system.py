@@ -2,14 +2,13 @@ from deep_sort_realtime.deepsort_tracker import *
 from ultralytics import YOLO
 from ultralytics.engine.results import Results, Boxes
 import logging ,torch, cv2
-from deep_sort_realtime.deep_sort.track import Track
-from tracks import *
+from tracks import CustomTrack
 import os
 from par import *
 import torch
 import torchvision.transforms as transforms
 import numpy as np
-from json_module import *
+from json_module import FileJson
 from torch.nn import functional as F
 
 
@@ -23,28 +22,32 @@ from torch.nn import functional as F
 # par_logger.setLevel(logging.INFO)
 
 FPS = 5 
-SAMPLE_TIME = 1/FPS  # 1/fps dove fps = #immagini/secondi
+SAMPLE_TIME = 1/FPS 
 
 # TRACKER
+# https://arxiv.org/pdf/1703.07402.pdf
 MAX_IOU_DISTANCE = 0.7  #sotto la soglia -> stesso oggetto
 MAX_AGE = 30 # 6 secondi
 N_INIT = 7 # 1.5 secondo
 MAX_COSINE_DISTANCE = 0.3
 NN_BUDGET = 50
 EMBEDDER_MODEL = 'osnet_x1_0'
+# https://kaiyangzhou.github.io/deep-person-reid/MODEL_ZOO.html
 
 # DETECTOR
-#https://docs.ultralytics.com/modes/predict/#inference-arguments
-# inserendo HEIGHT e WIDTH pari a 640 e 480 abbiamo prestazioni peggiori del detector rispetto a quando sono 576 e 352
 MODEL = 'yolov8s.pt'
-HEIGHT = 544 # se metto 640 abbiamo uguali performance 
+HEIGHT = 544 
 WIDTH = 960
 TARGET = 'person'
-CLASSES = [0] # 0 = person
+CLASSES = [0] # person
 CONFIDENCE = 0.6
 
+# GUI
 WIDTH_SHOW = 1280
 HEIGHT_SHOW = 720
+GENDER = {'male' : 'M', 'female' : 'F', '' : ''}
+BAG = {False : 'No Bag', True : 'Bag', '' : ''}
+HAT = {False : 'No Hat', True : 'Hat', '': ''}
 
 class System():
 
@@ -56,23 +59,13 @@ class System():
         
         embedder_path = os.path.join(path_to_dir, 'models', EMBEDDER_MODEL + '.pth')
         self.tracker = DeepSort(embedder=EMBEDDER_CHOICES[1], embedder_model_name=EMBEDDER_MODEL, embedder_wts=embedder_path, max_iou_distance=MAX_IOU_DISTANCE, max_age=MAX_AGE, n_init=N_INIT, max_cosine_distance=MAX_COSINE_DISTANCE, nn_budget=NN_BUDGET, override_track_class=CustomTrack)  
-        # https://arxiv.org/pdf/1703.07402.pdf
-        # max_iou_distance con 0.7 significa che 2 bb devono avere una distanza massima del 70 %. piu è alto e piu tollerante è il tracker
-        # max_age = 30 è il numero di frame in cui un oggetto non viene rilevato prima di essere eliminato. Essendo fps = 10, allora abbiamo 3 secondi prima di rimuovere l oggettoà
-        # n_init = 10  è il numero di frame in cui un oggetto deve essere rilevato prima di essere considerato un oggetto vero e proprio. Impiega 1 secondo
-        # max_cosine_distance = 0.15 è la distanza massima tra 2 feature per essere considerate uguali. Più è alto e piu tollerante è il tracker
-        # nn_budget = 5 frame precdenti del feature vector devono essere considerati. Se none allora le considero tutte
-
-        #tracker = DeepSort(embedder=EMBEDDER_CHOICES[1], embedder_model_name= 'osnet_x0_75', max_cosine_distance=0.5, max_age=600)
-        #https://kaiyangzhou.github.io/deep-person-reid/MODEL_ZOO.html
-
+       
         reader = FileJson(path_roi)
         roi1, roi2 = reader.read_roi()
 
         roi1 = (int(WIDTH * roi1['x']), int(HEIGHT * roi1['y']), int(WIDTH * roi1['width']), int(HEIGHT * roi1['height'])) 
         roi2 = (int(WIDTH * roi2['x']), int(HEIGHT * roi2['y']), int(WIDTH * roi2['width']), int(HEIGHT * roi2['height']))
 
-        
         self._roi1_x, self._roi1_y, self._roi1_w, self._roi1_h = roi1
         self._roi2_x, self._roi2_y, self._roi2_w, self._roi2_h = roi2
 
@@ -83,6 +76,7 @@ class System():
         self.tracks_collection = dict()
 
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        
         # detector_logger.info('Using Device: %s', self.device)
     
     def _extract_detections(self, res : Results, frame):
@@ -312,7 +306,7 @@ class System():
             x_max = self._transform(x_max, WIDTH, width)
             y_max = self._transform(y_max, HEIGHT, height)
 
-            
+            print_flag = False
 
             if track.roi1_inside:
                 
@@ -334,7 +328,6 @@ class System():
                 cv2.putText(frame, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
                 in_roi1 += 1
                 
-                
             
             elif track.roi2_inside:
 
@@ -350,24 +343,21 @@ class System():
                 cv2.putText(frame, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
                 in_roi2 += 1
                 
-            flag = False
+           
+            elif (x_min < WIDTH_SHOW and x_max > 0 and y_min < HEIGHT_SHOW and y_max > 0) and not track.is_deleted():                               
+                
+                outside_roi += 1
+                cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
+                # Calcola le dimensioni per il rettangolo bianco
+                text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
 
-            if track.roi1_inside == False and track.roi2_inside == False:
-
-                # bb = track.to_ltrb()
-                # x_min, y_min, x_max, y_max = int(bb[0]), int(bb[1]), int(bb[2]), int(bb[3]) # sono top left e bottom right. Con il sistema di riferimento al contrario le coordinate di bottom right sono piu grandi
-
-                if not (x_min >= WIDTH_SHOW or x_max <= 0 or y_min >= HEIGHT_SHOW or y_max <= 0) and not track.is_deleted(): #se persona esce dalla scena non viene contata, questo perché se persona esce dalla scena non perde subito il tracking                
-                    outside_roi += 1
-                    cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 0, 255), 2)
-                    # Calcola le dimensioni per il rettangolo bianco
-                    text_width, text_height = cv2.getTextSize(f"{track.track_id}", cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)[0]
-
-                    # Disegna il rettangolo bianco
-                    cv2.rectangle(frame, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
-                    cv2.putText(frame, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
-                else:
-                    flag = True
+                # Disegna il rettangolo bianco
+                cv2.rectangle(frame, (x_min , y_min), (x_min + text_width, y_min + text_height), (255, 255, 255), -1)
+                cv2.putText(frame, f"{track.track_id}", (x_min+1, y_min+11), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+            
+            else:
+                
+                print_flag = True
                
         
             # alcola i passaggi totali nelle roi
@@ -389,19 +379,24 @@ class System():
             cv2.putText(frame, text_line3, (5, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
             cv2.putText(frame, text_line4, (5, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
 
-            if flag: continue
+            if print_flag: continue
 
             # Stampa info persone
             cv2.rectangle(frame, (x_min - 30, y_max), (x_max + 30, y_max + 40), (255, 255, 255), -1)
-            cv2.putText(frame, f"Gender: {track.gender}", (x_min - 25, y_max + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
-            if track.bag == True and track.hat == False:
-                cv2.putText(frame, "Bag", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
-            elif track.bag == False and track.hat == True:
-                cv2.putText(frame, "Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
-            elif track.bag == True and track.hat == True:
-                cv2.putText(frame, "Bag Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
-            else:
-                 cv2.putText(frame, "No Bag No Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)   
+            cv2.putText(frame, f"Gender: {GENDER[track.gender]}", (x_min - 25, y_max + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
+            
+            s = f"{BAG[track.bag]} {HAT[track.hat]}"
+            cv2.putText(frame, s, (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
+            
+            # if track.bag == True and track.hat == False:
+            #     cv2.putText(frame, "Bag", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
+            # elif track.bag == False and track.hat == True:
+            #     cv2.putText(frame, "Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
+            # elif track.bag == True and track.hat == True:
+            #     cv2.putText(frame, "Bag Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
+            # else:
+            #      cv2.putText(frame, "No Bag No Hat", (x_min - 25, y_max + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)   
+            
             cv2.putText(frame, f"U-L: {track.upper} - {track.lower}", (x_min - 25, y_max + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 0), 1)
  
 

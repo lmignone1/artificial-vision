@@ -10,11 +10,11 @@ class CustomTrack(Track):
     def __init__(self, mean, covariance, track_id, n_init, max_age, feature=None, original_ltwh=None, det_class=None, det_conf=None, instance_mask=None, others=None):
         super().__init__(mean, covariance, track_id, n_init, max_age, feature, original_ltwh, det_class, det_conf, instance_mask, others)
 
-        self.upper = None
-        self.lower = None
-        self.gender = None
-        self.bag = None
-        self.hat = None
+        self.upper = ''
+        self.lower = ''
+        self.gender = ''
+        self.bag = ''
+        self.hat = ''
 
         self.roi1_time = 0
         self.roi2_time = 0
