@@ -30,7 +30,7 @@ MAX_IOU_DISTANCE = 0.7  #sotto la soglia -> stesso oggetto
 MAX_AGE = 30 # 6 secondi
 N_INIT = 7 # 1.5 secondo
 MAX_COSINE_DISTANCE = 0.3
-NN_BUDGET = 50
+NN_BUDGET = 50  # numero di frame da considerare per le feature
 EMBEDDER_MODEL = 'osnet_x1_0'
 # https://kaiyangzhou.github.io/deep-person-reid/MODEL_ZOO.html
 
