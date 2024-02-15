@@ -16,3 +16,10 @@ HEIGHT_DETECTOR = 1080
 WIDTH_DETECTOR = 1928
 
 vedere i parametri di HEIGHT_TRACKER e WIDTH_TRACKER
+
+
+spiegare nel report che gli id non vengono associati in ordine in quanto viene assegnato gia durante la fase di tentative (ancora non confermato)
+Questo perche deve associare un id a quell oggetto
+
+
+if show nei vari metodi potrebbe rallentare l esecuzione
