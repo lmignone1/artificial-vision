@@ -10,6 +10,10 @@ Before starting to use the project, ensure that your system satisfies the follow
 pip3 install -r requirements.txt
 ```
 
+Then, download PAR model from the following link and move it to the models folder:
+
+https://drive.google.com/drive/folders/1ZVa2NCow_KgHzf7G2JtQiUMmdbO2jToP?usp=drive_link
+
 # Run project
 
 Execute the project by running this command. You must specify your video, your own  `config.txt` for roi coords and eventually the `results.txt` . 

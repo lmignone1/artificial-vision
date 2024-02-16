@@ -5,5 +5,4 @@ __pycache__/
 validation*
 training*
 
-
-Carlo_model.pth
+best_model.pth
